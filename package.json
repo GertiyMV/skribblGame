@@ -1,0 +1,29 @@
+{
+  "name": "skribbl-game",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/GertiyMV/skribblGame.git"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "format": "prettier --check .",
+    "format:write": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "9.22.0",
+    "@typescript-eslint/eslint-plugin": "8.26.1",
+    "@typescript-eslint/parser": "8.26.1",
+    "eslint": "9.22.0",
+    "eslint-config-prettier": "9.1.0",
+    "prettier": "3.5.3",
+    "typescript": "5.8.2"
+  }
+}
