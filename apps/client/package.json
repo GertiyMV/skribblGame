@@ -1,0 +1,13 @@
+{
+  "name": "@skribbl/client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@skribbl/shared": "file:../../packages/shared"
+  },
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit -p tsconfig.json"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@skribbl/shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "types": "src/index.ts",
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit -p tsconfig.json"
+  }
+}
