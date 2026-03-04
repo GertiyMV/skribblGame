@@ -8,6 +8,8 @@
   },
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
-    "type-check": "tsc --noEmit -p tsconfig.json"
+    "type-check": "tsc --noEmit -p tsconfig.json",
+    "test": "echo \"Tests for client are not implemented yet\"",
+    "build": "tsc -p tsconfig.json"
   }
 }
