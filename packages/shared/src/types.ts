@@ -86,3 +86,4 @@ export type Message = {
 };
 
 const a: Message = {};
+const b: Message = {};
