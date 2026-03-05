@@ -31,4 +31,3 @@ export const RECONNECT_MAX_ATTEMPTS = 5;
 
 export const DRAW_MAX_POINTS_PER_MESSAGE = 200;
 export const WS_MAX_PAYLOAD_BYTES = 16 * 1024;
-

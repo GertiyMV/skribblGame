@@ -1,8 +1,8 @@
-import { ROUND_TIME_OPTIONS_SEC } from "./constants.js";
+import { ROUND_TIME_OPTIONS_SEC } from './constants.js';
 
-export type ConnectionStatus = "connected" | "disconnected";
+export type ConnectionStatus = 'connected' | 'disconnected';
 
-export type PlayerRole = "guessing" | "drawing" | "spectator";
+export type PlayerRole = 'guessing' | 'drawing' | 'spectator';
 
 export type RoundTimeSec = (typeof ROUND_TIME_OPTIONS_SEC)[number];
 
@@ -22,21 +22,21 @@ export type RoomSettings = {
   roundsCount: number;
   wordChoicesCount: number;
   hintsCount: number;
-  language: "ru";
+  language: 'ru';
   customWords?: string[];
   useCustomWordsOnly: boolean;
 };
 
 export enum GamePhase {
-  Lobby = "lobby",
-  InGame = "in_game",
-  GameOver = "game_over",
+  Lobby = 'lobby',
+  InGame = 'in_game',
+  GameOver = 'game_over',
 }
 
 export enum RoundPhase {
-  WordSelection = "word_selection",
-  Drawing = "drawing",
-  RoundEnd = "round_end",
+  WordSelection = 'word_selection',
+  Drawing = 'drawing',
+  RoundEnd = 'round_end',
 }
 
 export type GameState = {
@@ -61,7 +61,7 @@ export type DrawPoint = {
   t: number;
 };
 
-export type DrawTool = "brush" | "eraser" | "fill" | "clear";
+export type DrawTool = 'brush' | 'eraser' | 'fill' | 'clear';
 
 export type DrawEvent = {
   roomId: string;
@@ -74,7 +74,7 @@ export type DrawEvent = {
   isFinal: boolean;
 };
 
-export type ChatMessageType = "player" | "system" | "hint" | "guess_result";
+export type ChatMessageType = 'player' | 'system' | 'hint' | 'guess_result';
 
 export type Message = {
   id: string;
@@ -84,4 +84,3 @@ export type Message = {
   text: string;
   createdAt: string;
 };
-
