@@ -1,8 +1,4 @@
-import {
-  SHARED_PACKAGE_NAME,
-  type GameState,
-  type SharedMessage,
-} from '@skribbl/shared';
+import { SHARED_PACKAGE_NAME, type GameState, type SharedMessage } from '@skribbl/shared';
 
 const createServerMessage = (): SharedMessage<{ source: string; state: GameState | null }> => ({
   type: 'server:init',
