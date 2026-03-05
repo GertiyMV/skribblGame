@@ -1,15 +1,10 @@
 name: Test
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
 
 jobs:
   test:
-    # Temporarily disabled until tests are implemented
-    if: ${{ false }}
     runs-on: ubuntu-latest
 
     steps:
