@@ -1,0 +1,16 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+      target: dev
+    image: skribbl-server-dev
+    container_name: skribbl-server-dev
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+      target: dev
+    image: skribbl-client-dev
+    container_name: skribbl-client-dev

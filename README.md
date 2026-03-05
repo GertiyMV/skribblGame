@@ -20,6 +20,7 @@ packages/
   shared/     # shared contracts/types
 docs/
   docs/code-style/git.md
+docker-compose.yml
 ```
 
 ## Requirements
@@ -41,6 +42,26 @@ npm install
 - `npm run type-check` — запускает проверку типов во всех workspace-пакетах
 - `npm run format` — проверяет форматирование Prettier
 - `npm run format:write` — исправляет форматирование Prettier
+
+## Docker (Scaffold)
+
+На текущем этапе бизнес-сервисы еще не реализованы, поэтому Docker-конфигурация подготовлена как инфраструктурный каркас:
+
+- `apps/client/Dockerfile` и `apps/server/Dockerfile` используют multi-stage build;
+- `docker-compose.yml` поднимает два контейнера: `client` и `server`;
+- в контейнерах запускается `tsc --watch` через workspace-скрипты, чтобы `docker compose up` держал сервисы в активном состоянии до появления runtime-команд.
+
+Запуск:
+
+```bash
+docker compose up --build
+```
+
+Остановка:
+
+```bash
+docker compose down
+```
 
 ## Workspace Packages
 

@@ -5,8 +5,6 @@ on:
 
 jobs:
   build:
-    # Temporarily disabled until build strategy is finalized
-    if: ${{ false }}
     runs-on: ubuntu-latest
 
     steps:
