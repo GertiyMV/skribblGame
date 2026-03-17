@@ -14,6 +14,7 @@ import {
   ROUNDS_COUNT_MIN,
   ROUND_TIME_OPTIONS_SEC,
 } from '../constants.js';
+import { GamePhase, RoundPhase } from '../types.js';
 
 export const roomIdSchema = z
   .string()
@@ -77,4 +78,45 @@ export const roomSettingsOverrideSchema = z.object({
 export const scoreEntrySchema = z.object({
   playerId: playerIdSchema,
   score: z.number().int().min(0),
+});
+
+export const connectionStatusSchema = z.enum(['connected', 'disconnected']);
+
+export const playerRoleSchema = z.enum(['guessing', 'drawing', 'spectator']);
+
+export const playerSchema = z.object({
+  id: playerIdSchema,
+  nickname: nicknameSchema,
+  score: z.number().int().min(0),
+  isOwner: z.boolean(),
+  guessed: z.boolean(),
+  connectionStatus: connectionStatusSchema,
+  role: playerRoleSchema,
+});
+
+export const roomSettingsSchema = z.object({
+  maxPlayers: z.number().int().min(ROOM_MAX_PLAYERS_MIN).max(ROOM_MAX_PLAYERS_MAX),
+  roundTimeSec: roundTimeSecSchema,
+  roundsCount: z.number().int().min(ROUNDS_COUNT_MIN).max(ROUNDS_COUNT_MAX),
+  wordChoicesCount: z.number().int().min(1),
+  hintsCount: z.number().int().min(HINTS_COUNT_MIN).max(HINTS_COUNT_MAX),
+  language: z.literal('ru'),
+  customWords: z.array(z.string().trim().min(1)).optional(),
+  useCustomWordsOnly: z.boolean(),
+});
+
+export const gameStateSchema = z.object({
+  roomId: roomIdSchema,
+  phase: z.nativeEnum(GamePhase),
+  roundPhase: z.nativeEnum(RoundPhase),
+  miniRoundNumber: z.number().int().min(0),
+  totalMiniRounds: z.number().int().min(0),
+  leaderPlayerId: playerIdSchema,
+  roundEndAt: timestampSchema,
+  wordMask: z.string(),
+  wordLength: z.number().int().min(0),
+  hintsUsed: z.number().int().min(0),
+  hintsTotal: z.number().int().min(0),
+  players: z.array(playerSchema),
+  settings: roomSettingsSchema,
 });

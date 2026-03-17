@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   drawPointsSchema,
   eventIdSchema,
+  gameStateSchema,
   hexColorSchema,
   messageIdSchema,
   messageTextSchema,
@@ -72,6 +73,12 @@ const serverPlayerSchema = z.object({
 const serverPlayerJoinedSchema = eventMetaSchema.extend({
   player: serverPlayerSchema,
   playersCount: z.number().int().min(1),
+});
+
+const serverSessionReadySchema = eventMetaSchema.extend({
+  playerId: playerIdSchema,
+  reconnectToken: z.string().trim().min(1),
+  state: gameStateSchema,
 });
 
 const serverPlayerLeftSchema = eventMetaSchema.extend({
@@ -165,6 +172,7 @@ export const clientToServerSchemas = {
 
 export const serverToClientSchemas = {
   player_joined: serverPlayerJoinedSchema,
+  session_ready: serverSessionReadySchema,
   player_left: serverPlayerLeftSchema,
   round_start: serverRoundStartSchema,
   draw_update: serverDrawUpdateSchema,

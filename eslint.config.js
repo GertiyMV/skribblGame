@@ -27,5 +27,14 @@ export default [
       ],
     },
   },
+  {
+    files: ['apps/server/**/*.ts'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
   eslintConfigPrettier,
 ];
