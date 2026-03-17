@@ -6,6 +6,10 @@ services:
       target: dev
     image: skribbl-server-dev
     container_name: skribbl-server-dev
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
 
   client:
     build:
@@ -14,3 +18,9 @@ services:
       target: dev
     image: skribbl-client-dev
     container_name: skribbl-client-dev
+
+  redis:
+    image: redis:7-alpine
+    container_name: skribbl-redis
+    ports:
+      - '6379:6379'
