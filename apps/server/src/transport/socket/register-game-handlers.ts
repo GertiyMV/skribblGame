@@ -27,11 +27,11 @@ export const registerGameHandlers = (params: {
         return;
       }
 
-      await handleJoinRoom({ roomEmitterTarget, socket, redis, payload });
+      await handleJoinRoom({ io, roomEmitterTarget, socket, redis, payload });
     });
 
-    socket.on('disconnect', async () => {
-      await handleDisconnect(roomEmitterTarget, socket, redis);
+    socket.on('disconnect', async (reason) => {
+      await handleDisconnect(roomEmitterTarget, socket, redis, reason);
     });
   });
 };

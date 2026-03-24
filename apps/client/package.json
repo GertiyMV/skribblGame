@@ -4,12 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "dependencies": {
-    "@skribbl/shared": "file:../../packages/shared"
+    "@skribbl/shared": "file:../../packages/shared",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
   },
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
     "type-check": "tsc --noEmit -p tsconfig.json",
-    "test": "echo \"Tests for client are not implemented yet\"",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "build": "tsc -p tsconfig.json"
   }
 }
