@@ -10,7 +10,7 @@ import {
   replaceSession,
   type PlayerSession,
 } from '../../repositories/session-repository.js';
-import type { GameSocket, RoomEmitterTarget } from '../../types/socket.js';
+import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../types/socket.js';
 import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
 import {
   createPlayerJoinedEvent,
@@ -25,12 +25,13 @@ export const attachSocketSession = (socket: GameSocket, session: PlayerSession):
 };
 
 export const tryReconnect = async (params: {
+  io: GameNamespace;
   roomEmitterTarget: RoomEmitterTarget;
   socket: GameSocket;
   redis: RedisClientType;
   payload: ClientToServerEventPayloads['join_room'];
 }): Promise<boolean> => {
-  const { roomEmitterTarget, socket, redis, payload } = params;
+  const { io, roomEmitterTarget, socket, redis, payload } = params;
 
   if (!payload.reconnectToken) {
     return false;
@@ -76,6 +77,17 @@ export const tryReconnect = async (params: {
 
   await saveRoomState(redis, updatedState);
   await replaceSession(redis, session.sessionId, nextSession);
+
+  const socketsInRoom = await io.in(updatedState.roomId).fetchSockets();
+  for (const connectedSocket of socketsInRoom) {
+    if (connectedSocket.id === socket.id) {
+      continue;
+    }
+
+    if (connectedSocket.data.playerId === nextSession.playerId) {
+      connectedSocket.disconnect(true);
+    }
+  }
 
   socket.join(updatedState.roomId);
   attachSocketSession(socket, nextSession);

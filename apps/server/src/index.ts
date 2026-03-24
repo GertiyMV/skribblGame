@@ -34,6 +34,8 @@ const createServer = async (): Promise<void> => {
       methods: ['GET', 'POST'],
     },
     maxHttpBufferSize: WS_MAX_PAYLOAD_BYTES,
+    pingInterval: 10_000,
+    pingTimeout: 20_000,
   });
 
   const namespace: GameNamespace = io.of(gameNamespace);

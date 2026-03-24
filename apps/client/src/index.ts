@@ -1,4 +1,5 @@
 import { SHARED_PACKAGE_NAME, type GameState, type SharedMessage } from '@skribbl/shared';
+import { GameSocketClient, type GameSocketClientOptions } from './game-socket-client.js';
 
 const createClientMessage = (): SharedMessage<{ source: string; state: GameState | null }> => ({
   type: 'client:init',
@@ -6,3 +7,6 @@ const createClientMessage = (): SharedMessage<{ source: string; state: GameState
 });
 
 void createClientMessage;
+
+export { createClientMessage, GameSocketClient };
+export type { GameSocketClientOptions };

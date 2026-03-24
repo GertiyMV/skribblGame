@@ -17,7 +17,7 @@ import {
 } from '../../../repositories/session-repository.js';
 import { createUniqueRoomId } from '../../../services/game/room-service.js';
 import { attachSocketSession, tryReconnect } from '../../../services/game/session-service.js';
-import type { GameSocket, RoomEmitterTarget } from '../../../types/socket.js';
+import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../../types/socket.js';
 import { emitToRoom, emitToSocket } from '../emitter.js';
 import {
   createJoinErrorEvent,
@@ -68,14 +68,15 @@ export const handleCreateRoom = async (params: {
 };
 
 export const handleJoinRoom = async (params: {
+  io: GameNamespace;
   roomEmitterTarget: RoomEmitterTarget;
   socket: GameSocket;
   redis: RedisClientType;
   payload: ClientToServerEventPayloads['join_room'];
 }): Promise<void> => {
-  const { roomEmitterTarget, socket, redis, payload } = params;
+  const { io, roomEmitterTarget, socket, redis, payload } = params;
 
-  const reconnected = await tryReconnect({ roomEmitterTarget, socket, redis, payload });
+  const reconnected = await tryReconnect({ io, roomEmitterTarget, socket, redis, payload });
   if (reconnected) {
     return;
   }
@@ -198,6 +199,7 @@ export const handleDisconnect = async (
   roomEmitterTarget: RoomEmitterTarget,
   socket: GameSocket,
   redis: RedisClientType,
+  reason: string,
 ): Promise<void> => {
   const { playerId, roomId, sessionId } = socket.data;
 
@@ -232,6 +234,10 @@ export const handleDisconnect = async (
     roomEmitterTarget,
     updatedState.roomId,
     'player_left',
-    createPlayerLeftEvent({ state: updatedState, playerId, reason: 'disconnect' }),
+    createPlayerLeftEvent({
+      state: updatedState,
+      playerId,
+      reason: reason === 'ping timeout' ? 'timeout' : 'disconnect',
+    }),
   );
 };
