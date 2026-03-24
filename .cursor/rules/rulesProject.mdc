@@ -1,0 +1,23 @@
+---
+description: Project addendum for skribblDocs governance
+alwaysApply: true
+---
+
+# Project Addendum (skribblDocs)
+
+## Purpose
+Before executing any task, always check the relevant project regulations in the `skribblDocs` workspace and perform the work in the context of those documents.
+
+## Required Sources (by relevance)
+- `style`
+- `architecture`
+- `patterns/guidelines`
+- `API/contracts`
+- `test/deploy rules`
+- other project governance documents
+
+## Rule for Regulation Conflicts
+If project regulations contradict each other:
+1. Explicitly record the conflict.
+2. Briefly state which documents are in conflict.
+3. Propose a safe `fallback` that minimizes risk for production.
