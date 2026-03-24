@@ -7,8 +7,6 @@ build/
 .svelte-kit/
 .vite/
 *.tsbuildinfo
-docs/
-.cursor/
 
 # Test artifacts
 coverage/
