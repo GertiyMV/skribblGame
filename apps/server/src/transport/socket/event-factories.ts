@@ -92,3 +92,19 @@ export const createJoinErrorEvent = (params: {
     message: params.message,
   },
 });
+
+export const createRateLimitEvent = (params: {
+  roomId: string;
+  playerId: string;
+}): ServerToClientEventPayloads['guess_result'] => ({
+  eventId: randomUUID(),
+  ts: nowIso(),
+  roomId: params.roomId,
+  playerId: params.playerId,
+  messageId: randomUUID(),
+  ok: false,
+  error: {
+    code: 'rate_limit_exceeded',
+    message: 'Rate limit exceeded',
+  },
+});
