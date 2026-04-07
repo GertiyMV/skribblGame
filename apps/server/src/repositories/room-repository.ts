@@ -87,3 +87,8 @@ export const getRoomState = async (
 
   return JSON.parse(json) as RoomState;
 };
+
+export const deleteRoomState = async (redis: RedisClientType, roomId: string): Promise<void> => {
+  const key = roomKey(roomId);
+  await redis.del(key);
+};

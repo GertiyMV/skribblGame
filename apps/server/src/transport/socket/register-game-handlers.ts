@@ -4,6 +4,7 @@ import { handleCreateRoom, handleDisconnect, handleJoinRoom } from './handlers/r
 import { emitToSocket } from './emitter.js';
 import { createRateLimitEvent } from './event-factories.js';
 import { parsePayload } from '../../utils/socket/parse-payload.js';
+import { RoomManager } from '../../services/game/room-manager.js';
 import { SocketRateLimiter } from '../../utils/rate-limiter.js';
 import type { GameNamespace, RoomEmitterTarget } from '../../types/socket.js';
 
@@ -11,8 +12,9 @@ export const registerGameHandlers = (params: {
   io: GameNamespace;
   roomEmitterTarget: RoomEmitterTarget;
   redis: RedisClientType;
+  roomManager: RoomManager;
 }): void => {
-  const { io, roomEmitterTarget, redis } = params;
+  const { io, roomEmitterTarget, redis, roomManager } = params;
 
   io.on('connection', (socket) => {
     const rateLimiter = new SocketRateLimiter();
@@ -39,7 +41,7 @@ export const registerGameHandlers = (params: {
         return;
       }
 
-      await handleCreateRoom({ socket, redis, payload });
+      await handleCreateRoom({ socket, redis, roomManager, payload });
     });
 
     socket.on('join_room', async (rawPayload) => {
@@ -48,11 +50,11 @@ export const registerGameHandlers = (params: {
         return;
       }
 
-      await handleJoinRoom({ io, roomEmitterTarget, socket, redis, payload });
+      await handleJoinRoom({ io, roomEmitterTarget, socket, redis, roomManager, payload });
     });
 
     socket.on('disconnect', async (reason) => {
-      await handleDisconnect(roomEmitterTarget, socket, redis, reason);
+      await handleDisconnect(roomEmitterTarget, socket, redis, roomManager, reason);
     });
   });
 };

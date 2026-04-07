@@ -15,7 +15,7 @@ import {
   saveSession,
   type PlayerSession,
 } from '../../../repositories/session-repository.js';
-import { createUniqueRoomId } from '../../../services/game/room-service.js';
+import { RoomManager } from '../../../services/game/room-manager.js';
 import { attachSocketSession, tryReconnect } from '../../../services/game/session-service.js';
 import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../../types/socket.js';
 import { emitToRoom, emitToSocket } from '../emitter.js';
@@ -30,11 +30,12 @@ import {
 export const handleCreateRoom = async (params: {
   socket: GameSocket;
   redis: RedisClientType;
+  roomManager: RoomManager;
   payload: ClientToServerEventPayloads['create_room'];
 }): Promise<void> => {
-  const { socket, redis, payload } = params;
+  const { socket, redis, roomManager, payload } = params;
 
-  const roomId = await createUniqueRoomId(redis);
+  const roomId = roomManager.createRoom();
   const playerId = randomUUID();
   const sessionId = randomUUID();
 
@@ -57,6 +58,7 @@ export const handleCreateRoom = async (params: {
 
   socket.join(roomId);
   attachSocketSession(socket, session);
+  roomManager.addPlayer(roomId, playerId);
 
   emitToSocket(
     socket,
@@ -72,12 +74,17 @@ export const handleJoinRoom = async (params: {
   roomEmitterTarget: RoomEmitterTarget;
   socket: GameSocket;
   redis: RedisClientType;
+  roomManager: RoomManager;
   payload: ClientToServerEventPayloads['join_room'];
 }): Promise<void> => {
-  const { io, roomEmitterTarget, socket, redis, payload } = params;
+  const { io, roomEmitterTarget, socket, redis, roomManager, payload } = params;
 
   const reconnected = await tryReconnect({ io, roomEmitterTarget, socket, redis, payload });
   if (reconnected) {
+    const { playerId, roomId } = socket.data;
+    if (playerId && roomId) {
+      roomManager.addPlayer(roomId, playerId);
+    }
     return;
   }
 
@@ -170,6 +177,7 @@ export const handleJoinRoom = async (params: {
 
   socket.join(updatedState.roomId);
   attachSocketSession(socket, session);
+  roomManager.addPlayer(updatedState.roomId, playerId);
 
   emitToSocket(
     socket,
@@ -199,6 +207,7 @@ export const handleDisconnect = async (
   roomEmitterTarget: RoomEmitterTarget,
   socket: GameSocket,
   redis: RedisClientType,
+  roomManager: RoomManager,
   reason: string,
 ): Promise<void> => {
   const { playerId, roomId, sessionId } = socket.data;
@@ -230,6 +239,7 @@ export const handleDisconnect = async (
   };
 
   await saveRoomState(redis, updatedState);
+  roomManager.removePlayer(roomId, playerId);
   emitToRoom(
     roomEmitterTarget,
     updatedState.roomId,
