@@ -5,6 +5,8 @@ import { Server } from 'socket.io';
 
 import { gameNamespace } from './constants/socket.js';
 import { env } from './config/env.js';
+import { deleteRoomState } from './repositories/room-repository.js';
+import { RoomManager } from './services/game/room-manager.js';
 import { connectRedis } from './services/redis/client.js';
 import { registerGameHandlers } from './transport/socket/register-game-handlers.js';
 import type {
@@ -16,6 +18,7 @@ import type {
 
 const createServer = async (): Promise<void> => {
   const redis = await connectRedis();
+  const roomManager = new RoomManager((roomId) => deleteRoomState(redis, roomId));
 
   const httpServer = http.createServer((request, response) => {
     if (request.url === '/health') {
@@ -43,7 +46,7 @@ const createServer = async (): Promise<void> => {
     to: (roomId) => namespace.to(roomId) as unknown as RuntimeEmitter,
   };
 
-  registerGameHandlers({ io: namespace, roomEmitterTarget, redis });
+  registerGameHandlers({ io: namespace, roomEmitterTarget, redis, roomManager });
 
   httpServer.listen(env.PORT, env.HOST, () => {
     console.log(`Server listening on ${env.HOST}:${env.PORT}`);
