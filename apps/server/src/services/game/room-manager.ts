@@ -62,7 +62,7 @@ export class RoomManager {
       room.emptyTimer = setTimeout(() => {
         this.rooms.delete(roomId);
         void this.onRoomDeleted(roomId);
-      }, ROOM_EMPTY_TIMEOUT_MS);
+      }, ROOM_EMPTY_TIMEOUT_MS).unref();
     }
   }
 
