@@ -5,7 +5,7 @@ export const ROOM_CODE_MIN_LENGTH = 4;
 export const ROOM_CODE_MAX_LENGTH = 6;
 
 export const ROOM_MAX_PLAYERS_MIN = 2;
-export const ROOM_MAX_PLAYERS_MAX = 20;
+export const ROOM_MAX_PLAYERS_MAX = 12;
 export const DEFAULT_ROOM_MAX_PLAYERS = 8;
 
 export const ROUND_TIME_OPTIONS_SEC = [30, 45, 60, 80, 90, 120] as const;
