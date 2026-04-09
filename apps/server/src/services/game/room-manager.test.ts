@@ -144,7 +144,11 @@ test('removePlayer: calls onReconnectTimeout after reconnect window expires', as
 });
 
 test('addPlayer: cancels empty room deletion timer', () => {
-  const manager = new RoomManager(noop, noop);
+  const { fakeSetTimeout, fakeClearTimeout } = makeFakeTimers();
+  const manager = new RoomManager(noop, noop, {
+    setTimeout: fakeSetTimeout,
+    clearTimeout: fakeClearTimeout,
+  });
   const roomId = manager.createRoom();
   manager.addPlayer(roomId, 'player-1');
   manager.removePlayer(roomId, 'player-1');
