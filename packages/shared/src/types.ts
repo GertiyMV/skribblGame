@@ -47,6 +47,7 @@ export type GameState = {
   totalMiniRounds: number;
   leaderPlayerId: string;
   roundEndAt: string;
+  wordOptions: string[];
   wordMask: string;
   wordLength: number;
   hintsUsed: number;

@@ -60,6 +60,7 @@ export const createInitialRoomState = (params: {
     totalMiniRounds: calculateTotalMiniRounds(settings.roundsCount, players.length),
     leaderPlayerId: params.ownerPlayerId,
     roundEndAt: nowIso,
+    wordOptions: [],
     wordMask: '',
     wordLength: 0,
     hintsUsed: 0,

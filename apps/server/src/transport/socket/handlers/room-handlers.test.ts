@@ -24,6 +24,7 @@ const BASE_ROOM_STATE: RoomState = {
   totalMiniRounds: 2,
   leaderPlayerId: 'owner-id',
   roundEndAt: '2026-04-08T12:00:00.000Z',
+  wordOptions: [],
   wordMask: '',
   wordLength: 0,
   hintsUsed: 0,

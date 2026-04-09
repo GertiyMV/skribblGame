@@ -4,6 +4,7 @@ import { handleCreateRoom, handleDisconnect, handleJoinRoom } from './handlers/r
 import { emitToSocket } from './emitter.js';
 import { createRateLimitEvent } from './event-factories.js';
 import { parsePayload } from '../../utils/socket/parse-payload.js';
+import { GameEngine } from '../../services/game/game-engine.js';
 import { RoomManager } from '../../services/game/room-manager.js';
 import { SocketRateLimiter } from '../../utils/rate-limiter.js';
 import type { GameNamespace, RoomEmitterTarget } from '../../types/socket.js';
@@ -13,8 +14,9 @@ export const registerGameHandlers = (params: {
   roomEmitterTarget: RoomEmitterTarget;
   redis: RedisClientType;
   roomManager: RoomManager;
+  gameEngine: GameEngine;
 }): void => {
-  const { io, roomEmitterTarget, redis, roomManager } = params;
+  const { io, roomEmitterTarget, redis, roomManager, gameEngine } = params;
 
   io.on('connection', (socket) => {
     const rateLimiter = new SocketRateLimiter();
@@ -55,6 +57,24 @@ export const registerGameHandlers = (params: {
 
     socket.on('disconnect', async (reason) => {
       await handleDisconnect(roomEmitterTarget, socket, redis, roomManager, reason);
+    });
+
+    socket.on('start_game', async (rawPayload) => {
+      const payload = parsePayload('start_game', rawPayload);
+      if (!payload) {
+        return;
+      }
+
+      await gameEngine.handleStartGame(socket, payload);
+    });
+
+    socket.on('choose_word', async (rawPayload) => {
+      const payload = parsePayload('choose_word', rawPayload);
+      if (!payload) {
+        return;
+      }
+
+      await gameEngine.handleChooseWord(socket, payload);
     });
   });
 };

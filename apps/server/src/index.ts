@@ -12,6 +12,7 @@ import {
   type RoomState,
 } from './repositories/room-repository.js';
 import { RoomManager } from './services/game/room-manager.js';
+import { GameEngine } from './services/game/game-engine.js';
 import { connectRedis } from './services/redis/client.js';
 import { emitToRoom } from './transport/socket/emitter.js';
 import { createScoreUpdateEvent } from './transport/socket/event-factories.js';
@@ -71,7 +72,9 @@ const createServer = async (): Promise<void> => {
     },
   );
 
-  registerGameHandlers({ io: namespace, roomEmitterTarget, redis, roomManager });
+  const gameEngine = new GameEngine(redis, roomEmitterTarget);
+
+  registerGameHandlers({ io: namespace, roomEmitterTarget, redis, roomManager, gameEngine });
 
   httpServer.listen(env.PORT, env.HOST, () => {
     console.log(`Server listening on ${env.HOST}:${env.PORT}`);

@@ -113,6 +113,7 @@ export const gameStateSchema = z.object({
   totalMiniRounds: z.number().int().min(0),
   leaderPlayerId: playerIdSchema,
   roundEndAt: timestampSchema,
+  wordOptions: z.array(wordSchema),
   wordMask: z.string(),
   wordLength: z.number().int().min(0),
   hintsUsed: z.number().int().min(0),
