@@ -54,10 +54,13 @@ const makeRedisMock = (roomState: RoomState | null) =>
   ({
     get: async (_key: string) => (roomState ? JSON.stringify(roomState) : null),
     set: async (_key: string, _value: string) => 'OK' as const,
+    hSet: async (_key: string, _fields: Record<string, string>) => 0,
+    expire: async (_key: string, _seconds: number) => 0,
     multi: () => {
       const chain = {
         hSet: (_key: string, _fields: Record<string, string>) => chain,
         expire: (_key: string, _seconds: number) => chain,
+        del: (_key: string) => chain,
         exec: async () => [] as unknown[],
       };
       return chain;
@@ -108,7 +111,10 @@ test('handleJoinRoom: emits room_not_found when room does not exist in Redis', a
     roomEmitterTarget: makeRoomEmitterMock().target,
     socket,
     redis: makeRedisMock(null),
-    roomManager: new RoomManager(async () => {}),
+    roomManager: new RoomManager(
+      async () => {},
+      async () => {},
+    ),
     payload: { roomId: 'ZZZZZZ', nickname: 'Alice' },
   });
 
@@ -127,7 +133,10 @@ test('handleJoinRoom: emits game_in_progress when room phase is not Lobby', asyn
     roomEmitterTarget: makeRoomEmitterMock().target,
     socket,
     redis: makeRedisMock(state),
-    roomManager: new RoomManager(async () => {}),
+    roomManager: new RoomManager(
+      async () => {},
+      async () => {},
+    ),
     payload: { roomId: 'ABCDEF', nickname: 'Alice' },
   });
 
@@ -169,7 +178,10 @@ test('handleJoinRoom: emits room_full when player count reaches maxPlayers', asy
     roomEmitterTarget: makeRoomEmitterMock().target,
     socket,
     redis: makeRedisMock(state),
-    roomManager: new RoomManager(async () => {}),
+    roomManager: new RoomManager(
+      async () => {},
+      async () => {},
+    ),
     payload: { roomId: 'ABCDEF', nickname: 'Alice' },
   });
 
@@ -187,7 +199,10 @@ test('handleJoinRoom: emits nickname_taken when nickname is already used in room
     roomEmitterTarget: makeRoomEmitterMock().target,
     socket,
     redis: makeRedisMock(BASE_ROOM_STATE),
-    roomManager: new RoomManager(async () => {}),
+    roomManager: new RoomManager(
+      async () => {},
+      async () => {},
+    ),
     payload: { roomId: 'ABCDEF', nickname: 'Owner' },
   });
 
@@ -200,7 +215,10 @@ test('handleJoinRoom: emits nickname_taken when nickname is already used in room
 test('handleJoinRoom: successful join emits session_ready to socket and player_joined + score_update to room', async () => {
   const { socket, events, joined } = makeSocketMock();
   const { target, broadcast } = makeRoomEmitterMock();
-  const roomManager = new RoomManager(async () => {});
+  const roomManager = new RoomManager(
+    async () => {},
+    async () => {},
+  );
   const roomId = roomManager.createRoom();
   const state: RoomState = { ...BASE_ROOM_STATE, roomId };
 

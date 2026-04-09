@@ -1,3 +1,4 @@
+import { RECONNECT_TIMEOUT_MS } from '@skribbl/shared';
 import { clearTimeout, setTimeout } from 'node:timers';
 
 const ROOM_CODE_LENGTH = 6;
@@ -11,10 +12,16 @@ interface RoomEntry {
 
 export class RoomManager {
   private readonly rooms = new Map<string, RoomEntry>();
+  private readonly reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly onRoomDeleted: (roomId: string) => Promise<void>;
+  private readonly onReconnectTimeout: (roomId: string, playerId: string) => Promise<void>;
 
-  constructor(onRoomDeleted: (roomId: string) => Promise<void>) {
+  constructor(
+    onRoomDeleted: (roomId: string) => Promise<void>,
+    onReconnectTimeout: (roomId: string, playerId: string) => Promise<void>,
+  ) {
     this.onRoomDeleted = onRoomDeleted;
+    this.onReconnectTimeout = onReconnectTimeout;
   }
 
   createRoom(): string {
@@ -42,6 +49,12 @@ export class RoomManager {
       return;
     }
 
+    const reconnectTimer = this.reconnectTimers.get(playerId);
+    if (reconnectTimer !== undefined) {
+      clearTimeout(reconnectTimer);
+      this.reconnectTimers.delete(playerId);
+    }
+
     if (room.emptyTimer !== null) {
       clearTimeout(room.emptyTimer);
       room.emptyTimer = null;
@@ -56,20 +69,35 @@ export class RoomManager {
       return;
     }
 
-    room.playerIds.delete(playerId);
+    const timer = setTimeout(() => {
+      this.reconnectTimers.delete(playerId);
+      room.playerIds.delete(playerId);
 
-    if (room.playerIds.size === 0) {
-      room.emptyTimer = setTimeout(() => {
-        this.rooms.delete(roomId);
-        void this.onRoomDeleted(roomId);
-      }, ROOM_EMPTY_TIMEOUT_MS).unref();
-    }
+      void this.onReconnectTimeout(roomId, playerId);
+
+      if (room.playerIds.size === 0) {
+        room.emptyTimer = setTimeout(() => {
+          this.rooms.delete(roomId);
+          void this.onRoomDeleted(roomId);
+        }, ROOM_EMPTY_TIMEOUT_MS).unref();
+      }
+    }, RECONNECT_TIMEOUT_MS).unref();
+
+    this.reconnectTimers.set(playerId, timer);
   }
 
   deleteRoom(roomId: string): void {
     const room = this.rooms.get(roomId);
     if (!room) {
       return;
+    }
+
+    for (const playerId of room.playerIds) {
+      const timer = this.reconnectTimers.get(playerId);
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        this.reconnectTimers.delete(playerId);
+      }
     }
 
     if (room.emptyTimer !== null) {

@@ -19,15 +19,11 @@ export const saveSession = async (
 ): Promise<void> => {
   const key = sessionKey(session.sessionId);
 
-  await redis
-    .multi()
-    .hSet(key, {
-      roomId: session.roomId,
-      playerId: session.playerId,
-      nickname: session.nickname,
-    })
-    .expire(key, reconnectTtlSeconds)
-    .exec();
+  await redis.hSet(key, {
+    roomId: session.roomId,
+    playerId: session.playerId,
+    nickname: session.nickname,
+  });
 };
 
 export const getSession = async (
@@ -54,6 +50,13 @@ export const deleteSession = async (redis: RedisClientType, sessionId: string): 
   await redis.del(key);
 };
 
+export const setSessionExpiry = async (
+  redis: RedisClientType,
+  sessionId: string,
+): Promise<void> => {
+  await redis.expire(sessionKey(sessionId), reconnectTtlSeconds);
+};
+
 export const replaceSession = async (
   redis: RedisClientType,
   previousSessionId: string,
@@ -67,7 +70,6 @@ export const replaceSession = async (
     playerId: nextSession.playerId,
     nickname: nextSession.nickname,
   });
-  multi.expire(nextKey, reconnectTtlSeconds);
 
   if (previousSessionId !== nextSession.sessionId) {
     multi.del(sessionKey(previousSessionId));

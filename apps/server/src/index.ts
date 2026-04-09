@@ -5,9 +5,16 @@ import { Server } from 'socket.io';
 
 import { gameNamespace } from './constants/socket.js';
 import { env } from './config/env.js';
-import { deleteRoomState } from './repositories/room-repository.js';
+import {
+  deleteRoomState,
+  getRoomState,
+  saveRoomState,
+  type RoomState,
+} from './repositories/room-repository.js';
 import { RoomManager } from './services/game/room-manager.js';
 import { connectRedis } from './services/redis/client.js';
+import { emitToRoom } from './transport/socket/emitter.js';
+import { createScoreUpdateEvent } from './transport/socket/event-factories.js';
 import { registerGameHandlers } from './transport/socket/register-game-handlers.js';
 import type {
   GameNamespace,
@@ -18,7 +25,6 @@ import type {
 
 const createServer = async (): Promise<void> => {
   const redis = await connectRedis();
-  const roomManager = new RoomManager((roomId) => deleteRoomState(redis, roomId));
 
   const httpServer = http.createServer((request, response) => {
     if (request.url === '/health') {
@@ -45,6 +51,25 @@ const createServer = async (): Promise<void> => {
   const roomEmitterTarget: RoomEmitterTarget = {
     to: (roomId) => namespace.to(roomId) as unknown as RuntimeEmitter,
   };
+
+  const roomManager = new RoomManager(
+    (roomId) => deleteRoomState(redis, roomId),
+    async (roomId, playerId) => {
+      // TODO: доделать при реализации game loop (обработка истечения реконнект-окна во время игры)
+      const state = await getRoomState(redis, roomId);
+      if (!state) {
+        return;
+      }
+
+      const updatedState: RoomState = {
+        ...state,
+        players: state.players.filter((player) => player.id !== playerId),
+      };
+
+      await saveRoomState(redis, updatedState);
+      emitToRoom(roomEmitterTarget, roomId, 'score_update', createScoreUpdateEvent(updatedState));
+    },
+  );
 
   registerGameHandlers({ io: namespace, roomEmitterTarget, redis, roomManager });
 
