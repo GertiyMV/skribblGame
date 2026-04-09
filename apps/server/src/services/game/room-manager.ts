@@ -5,23 +5,32 @@ const ROOM_CODE_LENGTH = 6;
 const ROOM_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const ROOM_EMPTY_TIMEOUT_MS = 60_000;
 
+type TimerHandle = ReturnType<typeof setTimeout>;
+type SetTimeoutFn = (callback: () => void, ms: number) => TimerHandle;
+type ClearTimeoutFn = (handle: TimerHandle) => void;
+
 interface RoomEntry {
   playerIds: Set<string>;
-  emptyTimer: ReturnType<typeof setTimeout> | null;
+  emptyTimer: TimerHandle | null;
 }
 
 export class RoomManager {
   private readonly rooms = new Map<string, RoomEntry>();
-  private readonly reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly reconnectTimers = new Map<string, TimerHandle>();
   private readonly onRoomDeleted: (roomId: string) => Promise<void>;
   private readonly onReconnectTimeout: (roomId: string, playerId: string) => Promise<void>;
+  private readonly scheduleTimer: SetTimeoutFn;
+  private readonly cancelTimer: ClearTimeoutFn;
 
   constructor(
     onRoomDeleted: (roomId: string) => Promise<void>,
     onReconnectTimeout: (roomId: string, playerId: string) => Promise<void>,
+    timerFns: { setTimeout?: SetTimeoutFn; clearTimeout?: ClearTimeoutFn } = {},
   ) {
     this.onRoomDeleted = onRoomDeleted;
     this.onReconnectTimeout = onReconnectTimeout;
+    this.scheduleTimer = timerFns.setTimeout ?? setTimeout;
+    this.cancelTimer = timerFns.clearTimeout ?? clearTimeout;
   }
 
   createRoom(): string {
@@ -51,12 +60,12 @@ export class RoomManager {
 
     const reconnectTimer = this.reconnectTimers.get(playerId);
     if (reconnectTimer !== undefined) {
-      clearTimeout(reconnectTimer);
+      this.cancelTimer(reconnectTimer);
       this.reconnectTimers.delete(playerId);
     }
 
     if (room.emptyTimer !== null) {
-      clearTimeout(room.emptyTimer);
+      this.cancelTimer(room.emptyTimer);
       room.emptyTimer = null;
     }
 
@@ -69,19 +78,19 @@ export class RoomManager {
       return;
     }
 
-    const timer = setTimeout(() => {
+    const timer = this.scheduleTimer(() => {
       this.reconnectTimers.delete(playerId);
       room.playerIds.delete(playerId);
 
       void this.onReconnectTimeout(roomId, playerId);
 
       if (room.playerIds.size === 0) {
-        room.emptyTimer = setTimeout(() => {
+        room.emptyTimer = this.scheduleTimer(() => {
           this.rooms.delete(roomId);
           void this.onRoomDeleted(roomId);
-        }, ROOM_EMPTY_TIMEOUT_MS).unref();
+        }, ROOM_EMPTY_TIMEOUT_MS);
       }
-    }, RECONNECT_TIMEOUT_MS).unref();
+    }, RECONNECT_TIMEOUT_MS);
 
     this.reconnectTimers.set(playerId, timer);
   }
@@ -95,13 +104,13 @@ export class RoomManager {
     for (const playerId of room.playerIds) {
       const timer = this.reconnectTimers.get(playerId);
       if (timer !== undefined) {
-        clearTimeout(timer);
+        this.cancelTimer(timer);
         this.reconnectTimers.delete(playerId);
       }
     }
 
     if (room.emptyTimer !== null) {
-      clearTimeout(room.emptyTimer);
+      this.cancelTimer(room.emptyTimer);
     }
 
     this.rooms.delete(roomId);

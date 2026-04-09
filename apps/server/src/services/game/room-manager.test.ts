@@ -1,11 +1,35 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-
-import { RECONNECT_TIMEOUT_MS } from '@skribbl/shared';
+import { setTimeout } from 'node:timers';
 
 import { RoomManager } from './room-manager.js';
 
 const noop = async (): Promise<void> => {};
+
+// Fake timer that fires all pending callbacks on demand
+const makeFakeTimers = () => {
+  const pending = new Map<number, () => void>();
+  let nextId = 1;
+
+  const fakeSetTimeout = (fn: () => void, _ms: number): ReturnType<typeof setTimeout> => {
+    const id = nextId++;
+    pending.set(id, fn);
+    return id as unknown as ReturnType<typeof setTimeout>;
+  };
+
+  const fakeClearTimeout = (handle: ReturnType<typeof setTimeout>): void => {
+    pending.delete(handle as unknown as number);
+  };
+
+  const tick = (): void => {
+    for (const [id, fn] of [...pending]) {
+      pending.delete(id);
+      fn();
+    }
+  };
+
+  return { fakeSetTimeout, fakeClearTimeout, tick };
+};
 
 test('createRoom: returns a 6-character uppercase alphanumeric code', () => {
   const manager = new RoomManager(noop, noop);
@@ -41,62 +65,79 @@ test('removePlayer: does nothing for unknown room', () => {
 });
 
 test('removePlayer: room persists immediately after last player leaves (reconnect window active)', () => {
-  const manager = new RoomManager(noop, noop);
+  const { fakeSetTimeout, fakeClearTimeout } = makeFakeTimers();
+  const manager = new RoomManager(noop, noop, {
+    setTimeout: fakeSetTimeout,
+    clearTimeout: fakeClearTimeout,
+  });
   const roomId = manager.createRoom();
   manager.addPlayer(roomId, 'player-1');
   manager.removePlayer(roomId, 'player-1');
   assert.equal(manager.hasRoom(roomId), true);
 });
 
-test('removePlayer: player stays in room during reconnect window', (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
-
-  const manager = new RoomManager(noop, noop);
+test('removePlayer: player stays in room during reconnect window', () => {
+  const { fakeSetTimeout, fakeClearTimeout } = makeFakeTimers();
+  const manager = new RoomManager(noop, noop, {
+    setTimeout: fakeSetTimeout,
+    clearTimeout: fakeClearTimeout,
+  });
   const roomId = manager.createRoom();
   manager.addPlayer(roomId, 'player-1');
   manager.removePlayer(roomId, 'player-1');
 
-  // До истечения таймера комната всё ещё существует
-  t.mock.timers.tick(RECONNECT_TIMEOUT_MS - 1);
+  // Таймер не тикал — комната ещё существует
   assert.equal(manager.hasRoom(roomId), true);
 });
 
-test('addPlayer: cancels reconnect timer when player returns', (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test('addPlayer: cancels reconnect timer when player returns', () => {
+  const { fakeSetTimeout, fakeClearTimeout, tick } = makeFakeTimers();
 
   let timeoutCalled = false;
-  const manager = new RoomManager(noop, async () => {
-    timeoutCalled = true;
-  });
+  const manager = new RoomManager(
+    noop,
+    async () => {
+      timeoutCalled = true;
+    },
+    {
+      setTimeout: fakeSetTimeout,
+      clearTimeout: fakeClearTimeout,
+    },
+  );
 
   const roomId = manager.createRoom();
   manager.addPlayer(roomId, 'player-1');
   manager.removePlayer(roomId, 'player-1');
-  manager.addPlayer(roomId, 'player-1');
+  manager.addPlayer(roomId, 'player-1'); // отменяет таймер
 
-  t.mock.timers.tick(RECONNECT_TIMEOUT_MS + 1);
+  tick();
   assert.equal(timeoutCalled, false);
 });
 
-test('removePlayer: calls onReconnectTimeout after reconnect window expires', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test('removePlayer: calls onReconnectTimeout after reconnect window expires', async () => {
+  const { fakeSetTimeout, fakeClearTimeout, tick } = makeFakeTimers();
 
   let capturedRoomId: string | null = null;
   let capturedPlayerId: string | null = null;
 
-  const manager = new RoomManager(noop, async (roomId, playerId) => {
-    capturedRoomId = roomId;
-    capturedPlayerId = playerId;
-  });
+  const manager = new RoomManager(
+    noop,
+    async (roomId, playerId) => {
+      capturedRoomId = roomId;
+      capturedPlayerId = playerId;
+    },
+    {
+      setTimeout: fakeSetTimeout,
+      clearTimeout: fakeClearTimeout,
+    },
+  );
 
   const roomId = manager.createRoom();
   manager.addPlayer(roomId, 'player-1');
   manager.removePlayer(roomId, 'player-1');
 
-  t.mock.timers.tick(RECONNECT_TIMEOUT_MS + 1);
-
-  // Ждём следующего тика event loop чтобы Promise успел выполниться
-  await Promise.resolve();
+  tick();
+  await Promise.resolve(); // ждём выполнения async-колбэка
 
   assert.equal(capturedRoomId, roomId);
   assert.equal(capturedPlayerId, 'player-1');
@@ -123,19 +164,26 @@ test('deleteRoom: does nothing for unknown room', () => {
   assert.doesNotThrow(() => manager.deleteRoom('ZZZZZZ'));
 });
 
-test('deleteRoom: cancels reconnect timers for players in room', (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test('deleteRoom: cancels reconnect timers for players in room', () => {
+  const { fakeSetTimeout, fakeClearTimeout, tick } = makeFakeTimers();
 
   let timeoutCalled = false;
-  const manager = new RoomManager(noop, async () => {
-    timeoutCalled = true;
-  });
+  const manager = new RoomManager(
+    noop,
+    async () => {
+      timeoutCalled = true;
+    },
+    {
+      setTimeout: fakeSetTimeout,
+      clearTimeout: fakeClearTimeout,
+    },
+  );
 
   const roomId = manager.createRoom();
   manager.addPlayer(roomId, 'player-1');
   manager.removePlayer(roomId, 'player-1');
   manager.deleteRoom(roomId);
 
-  t.mock.timers.tick(RECONNECT_TIMEOUT_MS + 1);
+  tick();
   assert.equal(timeoutCalled, false);
 });
