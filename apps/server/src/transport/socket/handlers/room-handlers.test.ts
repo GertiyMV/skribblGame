@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { describe, it } from 'node:test';
 
 import { GamePhase, RoundPhase } from '@skribbl/shared';
 import type { RedisClientType } from 'redis';
@@ -103,143 +103,145 @@ const makeRoomEmitterMock = () => {
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
-test('handleJoinRoom: emits room_not_found when room does not exist in Redis', async () => {
-  const { socket, events } = makeSocketMock();
+describe('handleJoinRoom', () => {
+  it('эмитит room_not_found, если комнаты нет в Redis', async () => {
+    const { socket, events } = makeSocketMock();
 
-  await handleJoinRoom({
-    io: makeIoMock(),
-    roomEmitterTarget: makeRoomEmitterMock().target,
-    socket,
-    redis: makeRedisMock(null),
-    roomManager: new RoomManager(
-      async () => {},
-      async () => {},
-    ),
-    payload: { roomId: 'ZZZZZZ', nickname: 'Alice' },
+    await handleJoinRoom({
+      io: makeIoMock(),
+      roomEmitterTarget: makeRoomEmitterMock().target,
+      socket,
+      redis: makeRedisMock(null),
+      roomManager: new RoomManager(
+        async () => {},
+        async () => {},
+      ),
+      payload: { roomId: 'ZZZZZZ', nickname: 'Alice' },
+    });
+
+    assert.equal(events.length, 1);
+    const [emitted] = events;
+    assert.equal(emitted!.event, 'guess_result');
+    assert.equal((emitted!.payload as { error: { code: string } }).error.code, 'room_not_found');
   });
 
-  assert.equal(events.length, 1);
-  const [emitted] = events;
-  assert.equal(emitted!.event, 'guess_result');
-  assert.equal((emitted!.payload as { error: { code: string } }).error.code, 'room_not_found');
-});
+  it('эмитит game_in_progress, если фаза комнаты не Lobby', async () => {
+    const state: RoomState = { ...BASE_ROOM_STATE, phase: GamePhase.InGame };
+    const { socket, events } = makeSocketMock();
 
-test('handleJoinRoom: emits game_in_progress when room phase is not Lobby', async () => {
-  const state: RoomState = { ...BASE_ROOM_STATE, phase: GamePhase.InGame };
-  const { socket, events } = makeSocketMock();
+    await handleJoinRoom({
+      io: makeIoMock(),
+      roomEmitterTarget: makeRoomEmitterMock().target,
+      socket,
+      redis: makeRedisMock(state),
+      roomManager: new RoomManager(
+        async () => {},
+        async () => {},
+      ),
+      payload: { roomId: 'ABCDEF', nickname: 'Alice' },
+    });
 
-  await handleJoinRoom({
-    io: makeIoMock(),
-    roomEmitterTarget: makeRoomEmitterMock().target,
-    socket,
-    redis: makeRedisMock(state),
-    roomManager: new RoomManager(
-      async () => {},
-      async () => {},
-    ),
-    payload: { roomId: 'ABCDEF', nickname: 'Alice' },
+    assert.equal(events.length, 1);
+    const [emitted] = events;
+    assert.equal(emitted!.event, 'guess_result');
+    assert.equal((emitted!.payload as { error: { code: string } }).error.code, 'game_in_progress');
   });
 
-  assert.equal(events.length, 1);
-  const [emitted] = events;
-  assert.equal(emitted!.event, 'guess_result');
-  assert.equal((emitted!.payload as { error: { code: string } }).error.code, 'game_in_progress');
-});
+  it('эмитит room_full, когда количество игроков достигает maxPlayers', async () => {
+    const state: RoomState = {
+      ...BASE_ROOM_STATE,
+      settings: { ...BASE_ROOM_STATE.settings, maxPlayers: 2 },
+      players: [
+        {
+          id: 'p1',
+          nickname: 'Player1',
+          score: 0,
+          isOwner: true,
+          guessed: false,
+          connectionStatus: 'connected',
+          role: 'guessing',
+        },
+        {
+          id: 'p2',
+          nickname: 'Player2',
+          score: 0,
+          isOwner: false,
+          guessed: false,
+          connectionStatus: 'connected',
+          role: 'guessing',
+        },
+      ],
+    };
+    const { socket, events } = makeSocketMock();
 
-test('handleJoinRoom: emits room_full when player count reaches maxPlayers', async () => {
-  const state: RoomState = {
-    ...BASE_ROOM_STATE,
-    settings: { ...BASE_ROOM_STATE.settings, maxPlayers: 2 },
-    players: [
-      {
-        id: 'p1',
-        nickname: 'Player1',
-        score: 0,
-        isOwner: true,
-        guessed: false,
-        connectionStatus: 'connected',
-        role: 'guessing',
-      },
-      {
-        id: 'p2',
-        nickname: 'Player2',
-        score: 0,
-        isOwner: false,
-        guessed: false,
-        connectionStatus: 'connected',
-        role: 'guessing',
-      },
-    ],
-  };
-  const { socket, events } = makeSocketMock();
+    await handleJoinRoom({
+      io: makeIoMock(),
+      roomEmitterTarget: makeRoomEmitterMock().target,
+      socket,
+      redis: makeRedisMock(state),
+      roomManager: new RoomManager(
+        async () => {},
+        async () => {},
+      ),
+      payload: { roomId: 'ABCDEF', nickname: 'Alice' },
+    });
 
-  await handleJoinRoom({
-    io: makeIoMock(),
-    roomEmitterTarget: makeRoomEmitterMock().target,
-    socket,
-    redis: makeRedisMock(state),
-    roomManager: new RoomManager(
-      async () => {},
-      async () => {},
-    ),
-    payload: { roomId: 'ABCDEF', nickname: 'Alice' },
+    assert.equal(events.length, 1);
+    const [emitted] = events;
+    assert.equal(emitted!.event, 'guess_result');
+    assert.equal((emitted!.payload as { error: { code: string } }).error.code, 'room_full');
   });
 
-  assert.equal(events.length, 1);
-  const [emitted] = events;
-  assert.equal(emitted!.event, 'guess_result');
-  assert.equal((emitted!.payload as { error: { code: string } }).error.code, 'room_full');
-});
+  it('эмитит nickname_taken, если ник уже занят в комнате', async () => {
+    const { socket, events } = makeSocketMock();
 
-test('handleJoinRoom: emits nickname_taken when nickname is already used in room', async () => {
-  const { socket, events } = makeSocketMock();
+    await handleJoinRoom({
+      io: makeIoMock(),
+      roomEmitterTarget: makeRoomEmitterMock().target,
+      socket,
+      redis: makeRedisMock(BASE_ROOM_STATE),
+      roomManager: new RoomManager(
+        async () => {},
+        async () => {},
+      ),
+      payload: { roomId: 'ABCDEF', nickname: 'Owner' },
+    });
 
-  await handleJoinRoom({
-    io: makeIoMock(),
-    roomEmitterTarget: makeRoomEmitterMock().target,
-    socket,
-    redis: makeRedisMock(BASE_ROOM_STATE),
-    roomManager: new RoomManager(
-      async () => {},
-      async () => {},
-    ),
-    payload: { roomId: 'ABCDEF', nickname: 'Owner' },
+    assert.equal(events.length, 1);
+    const [emitted] = events;
+    assert.equal(emitted!.event, 'guess_result');
+    assert.equal((emitted!.payload as { error: { code: string } }).error.code, 'nickname_taken');
   });
 
-  assert.equal(events.length, 1);
-  const [emitted] = events;
-  assert.equal(emitted!.event, 'guess_result');
-  assert.equal((emitted!.payload as { error: { code: string } }).error.code, 'nickname_taken');
-});
+  it('при успешном входе эмитит session_ready в сокет и player_joined + score_update в комнату', async () => {
+    const { socket, events, joined } = makeSocketMock();
+    const { target, broadcast } = makeRoomEmitterMock();
+    const roomManager = new RoomManager(
+      async () => {},
+      async () => {},
+    );
+    const roomId = roomManager.createRoom();
+    const state: RoomState = { ...BASE_ROOM_STATE, roomId };
 
-test('handleJoinRoom: successful join emits session_ready to socket and player_joined + score_update to room', async () => {
-  const { socket, events, joined } = makeSocketMock();
-  const { target, broadcast } = makeRoomEmitterMock();
-  const roomManager = new RoomManager(
-    async () => {},
-    async () => {},
-  );
-  const roomId = roomManager.createRoom();
-  const state: RoomState = { ...BASE_ROOM_STATE, roomId };
+    await handleJoinRoom({
+      io: makeIoMock(),
+      roomEmitterTarget: target,
+      socket,
+      redis: makeRedisMock(state),
+      roomManager,
+      payload: { roomId, nickname: 'Alice' },
+    });
 
-  await handleJoinRoom({
-    io: makeIoMock(),
-    roomEmitterTarget: target,
-    socket,
-    redis: makeRedisMock(state),
-    roomManager,
-    payload: { roomId, nickname: 'Alice' },
+    assert.equal(events.length, 1, 'socket receives session_ready');
+    assert.equal(events[0]!.event, 'session_ready');
+
+    const roomEvents = broadcast.filter((b) => b.roomId === roomId);
+    const eventNames = roomEvents.map((b) => b.event);
+    assert.ok(eventNames.includes('player_joined'), 'room receives player_joined');
+    assert.ok(eventNames.includes('score_update'), 'room receives score_update');
+
+    assert.deepEqual(joined, [roomId], 'socket joined the room');
+    assert.equal(socket.data.roomId, roomId, 'socket.data.roomId is set');
+    assert.ok(socket.data.playerId, 'socket.data.playerId is set');
   });
-
-  assert.equal(events.length, 1, 'socket receives session_ready');
-  assert.equal(events[0]!.event, 'session_ready');
-
-  const roomEvents = broadcast.filter((b) => b.roomId === roomId);
-  const eventNames = roomEvents.map((b) => b.event);
-  assert.ok(eventNames.includes('player_joined'), 'room receives player_joined');
-  assert.ok(eventNames.includes('score_update'), 'room receives score_update');
-
-  assert.deepEqual(joined, [roomId], 'socket joined the room');
-  assert.equal(socket.data.roomId, roomId, 'socket.data.roomId is set');
-  assert.ok(socket.data.playerId, 'socket.data.playerId is set');
 });
