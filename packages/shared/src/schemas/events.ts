@@ -87,15 +87,32 @@ const serverPlayerLeftSchema = eventMetaSchema.extend({
   playersCount: z.number().int().min(0),
 });
 
-const serverRoundStartSchema = eventMetaSchema.extend({
-  phase: z.enum(['word_selection', 'drawing']),
+const serverRoundStartWordSelectionSchema = eventMetaSchema.extend({
+  phase: z.literal('word_selection'),
   miniRoundNumber: z.number().int().min(1),
   totalMiniRounds: z.number().int().min(1),
   leaderPlayerId: playerIdSchema,
   roundEndAt: timestampSchema,
+  wordOptions: z.array(wordSchema).min(1),
+  wordMask: z.literal(''),
+  wordLength: z.literal(0),
+});
+
+const serverRoundStartDrawingSchema = eventMetaSchema.extend({
+  phase: z.literal('drawing'),
+  miniRoundNumber: z.number().int().min(1),
+  totalMiniRounds: z.number().int().min(1),
+  leaderPlayerId: playerIdSchema,
+  roundEndAt: timestampSchema,
+  wordOptions: z.array(wordSchema).length(0),
   wordMask: z.string().trim().min(1),
   wordLength: z.number().int().min(1),
 });
+
+const serverRoundStartSchema = z.discriminatedUnion('phase', [
+  serverRoundStartWordSelectionSchema,
+  serverRoundStartDrawingSchema,
+]);
 
 const serverDrawUpdateSchema = eventMetaSchema.extend({
   playerId: playerIdSchema,

@@ -108,3 +108,62 @@ export const createRateLimitEvent = (params: {
     message: 'Rate limit exceeded',
   },
 });
+
+export const createRoundStartEvent = (
+  state: RoomState,
+): ServerToClientEventPayloads['round_start'] => {
+  const baseEvent = {
+    eventId: randomUUID(),
+    ts: nowIso(),
+    roomId: state.roomId,
+    miniRoundNumber: state.miniRoundNumber,
+    totalMiniRounds: state.totalMiniRounds,
+    leaderPlayerId: state.leaderPlayerId,
+    roundEndAt: state.roundEndAt,
+  };
+
+  if (state.roundPhase === 'word_selection') {
+    return {
+      ...baseEvent,
+      phase: 'word_selection',
+      wordOptions: state.wordOptions,
+      wordMask: '',
+      wordLength: 0,
+    };
+  }
+
+  return {
+    ...baseEvent,
+    phase: 'drawing',
+    wordOptions: [],
+    wordMask: state.wordMask,
+    wordLength: state.wordLength,
+  };
+};
+
+export const createRoundEndEvent = (
+  state: RoomState,
+  reason: ServerToClientEventPayloads['round_end']['reason'],
+  nextLeaderPlayerId: string,
+): ServerToClientEventPayloads['round_end'] => ({
+  eventId: randomUUID(),
+  ts: nowIso(),
+  roomId: state.roomId,
+  miniRoundNumber: state.miniRoundNumber,
+  reason,
+  nextLeaderPlayerId,
+});
+
+export const createGameOverEvent = (
+  state: RoomState,
+  winners: string[],
+): ServerToClientEventPayloads['game_over'] => ({
+  eventId: randomUUID(),
+  ts: nowIso(),
+  roomId: state.roomId,
+  winners,
+  finalScores: state.players.map((player) => ({
+    playerId: player.id,
+    score: player.score,
+  })),
+});
