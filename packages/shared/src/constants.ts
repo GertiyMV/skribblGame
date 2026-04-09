@@ -26,7 +26,7 @@ export const DEFAULT_HINTS_COUNT = 3;
 export const WORD_SELECTION_DURATION_MS = 15_000;
 export const ROUND_END_DURATION_MS = 5_000;
 
-export const RECONNECT_TIMEOUT_MS = 30_000;
+export const RECONNECT_TIMEOUT_MS = 60_000;
 export const RECONNECT_MAX_ATTEMPTS = 3;
 
 export const DRAW_MAX_POINTS_PER_MESSAGE = 200;

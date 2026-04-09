@@ -13,6 +13,7 @@ import {
 import {
   getSession,
   saveSession,
+  setSessionExpiry,
   type PlayerSession,
 } from '../../../repositories/session-repository.js';
 import { RoomManager } from '../../../services/game/room-manager.js';
@@ -239,6 +240,7 @@ export const handleDisconnect = async (
   };
 
   await saveRoomState(redis, updatedState);
+  await setSessionExpiry(redis, sessionId);
   roomManager.removePlayer(roomId, playerId);
   emitToRoom(
     roomEmitterTarget,
