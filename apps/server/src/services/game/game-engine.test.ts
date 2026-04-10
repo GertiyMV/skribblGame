@@ -215,6 +215,130 @@ describe('GameEngine', () => {
     assert.ok(eventNames.includes('game_over'));
   });
 
+  it('wordOptions после start_game содержит количество слов из настроек комнаты', async () => {
+    const state = baseState();
+    const { redis } = createInMemoryRedis(state);
+    const { roomEmitterTarget } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+
+    const savedState = await getRoomState(redis, state.roomId);
+    assert.ok(savedState);
+    assert.equal(savedState.wordOptions.length, 3);
+    assert.ok(savedState.wordOptions.every((w) => typeof w === 'string' && w.length > 0));
+  });
+
+  it('wordOptions после start_game учитывает кастомное wordChoicesCount', async () => {
+    const state = baseState({
+      settings: {
+        ...baseState().settings,
+        wordChoicesCount: 5,
+      },
+    });
+    const { redis } = createInMemoryRedis(state);
+    const { roomEmitterTarget } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+
+    const savedState = await getRoomState(redis, state.roomId);
+    assert.ok(savedState);
+    assert.equal(savedState.wordOptions.length, 5);
+    assert.ok(savedState.wordOptions.every((w) => typeof w === 'string' && w.length > 0));
+  });
+
+  it('таймаут выбора слова автоматически выбирает слово из wordOptions', async () => {
+    // Полный цикл: start_game -> подмена wordOptions -> timeout word_selection.
+    const lobbyState = baseState({ totalMiniRounds: 1, miniRoundNumber: 0 });
+    const { redis: redis2, storage: storage2 } = createInMemoryRedis(lobbyState);
+    const { roomEmitterTarget: emitter2 } = makeRoomEmitter();
+    const timers2 = makeFakeTimers();
+    const engine2 = new GameEngine(redis2, emitter2, {
+      setTimeout: timers2.fakeSetTimeout,
+      clearTimeout: timers2.fakeClearTimeout,
+    });
+    const { socket: socket2 } = makeSocket({ roomId: lobbyState.roomId, playerId: 'owner-id' });
+
+    await engine2.handleStartGame(socket2, { roomId: lobbyState.roomId });
+
+    // Подменяем wordOptions в redis, чтобы знать точный набор
+    const stateAfterStart = await getRoomState(redis2, lobbyState.roomId);
+    assert.ok(stateAfterStart);
+    const knownOptions = ['кот', 'велосипед', 'библиотека'];
+    storage2.set(
+      `skribbl:room:${lobbyState.roomId}`,
+      JSON.stringify({ ...stateAfterStart, wordOptions: knownOptions }),
+    );
+
+    // Тикаем — срабатывает таймер word_selection, слово выбирается автоматически
+    timers2.tick();
+    await flushAsync();
+
+    const resultState = await getRoomState(redis2, lobbyState.roomId);
+    assert.ok(resultState);
+    assert.equal(resultState.roundPhase, RoundPhase.Drawing);
+    // Длина маски должна соответствовать выбранному слову.
+    const expectedLengths = knownOptions.map((w) => Array.from(w).length);
+    const maskLength = resultState.wordMask.split(' ').filter(Boolean).length;
+    assert.equal(maskLength, resultState.wordLength);
+    assert.ok(expectedLengths.includes(maskLength));
+    assert.ok(resultState.wordMask.split(' ').every((char) => char === '_'));
+  });
+
+  it('ведущий меняется после каждого раунда', async () => {
+    const state = baseState({ totalMiniRounds: 2, miniRoundNumber: 0 });
+    const { redis } = createInMemoryRedis(state);
+    const { roomEmitterTarget } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    // Старт игры: owner-id — первый ведущий
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+    let s = await getRoomState(redis, state.roomId);
+    assert.ok(s);
+    assert.equal(s.leaderPlayerId, 'owner-id');
+    assert.equal(s.roundPhase, RoundPhase.WordSelection);
+
+    // word_selection timeout → drawing; промежуточный getRoomState сбрасывает очередь микрозадач
+    timers.tick();
+    await flushAsync();
+    s = await getRoomState(redis, state.roomId);
+    assert.ok(s);
+    assert.equal(s.roundPhase, RoundPhase.Drawing);
+    assert.equal(s.leaderPlayerId, 'owner-id');
+
+    // drawing timeout → round_end, ведущий сменился на p2
+    timers.tick();
+    await flushAsync();
+    s = await getRoomState(redis, state.roomId);
+    assert.ok(s);
+    assert.equal(s.roundPhase, RoundPhase.RoundEnd);
+    assert.equal(s.leaderPlayerId, 'p2');
+
+    // round_end timeout → новый раунд word_selection, ведущий остаётся p2
+    timers.tick();
+    await flushAsync();
+    s = await getRoomState(redis, state.roomId);
+    assert.ok(s);
+    assert.equal(s.roundPhase, RoundPhase.WordSelection);
+    assert.equal(s.leaderPlayerId, 'p2');
+  });
+
   it('отклоняет choose_word, если слово не входит в wordOptions', async () => {
     const state = baseState({
       phase: GamePhase.InGame,
