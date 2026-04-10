@@ -28,7 +28,74 @@ interface RoomTimerState {
   roundEndTimer: TimerHandle | null;
 }
 
-const WORD_BANK = ['apple', 'rocket', 'forest', 'planet', 'castle', 'bridge', 'ocean', 'pencil'];
+const WORD_BANK = {
+  easy: [
+    'кот',
+    'дом',
+    'лес',
+    'река',
+    'рыба',
+    'небо',
+    'звезда',
+    'цветок',
+    'книга',
+    'стол',
+    'стул',
+    'мяч',
+    'солнце',
+    'луна',
+    'море',
+    'гора',
+    'снег',
+    'дождь',
+    'хлеб',
+    'молоко',
+  ],
+  medium: [
+    'велосипед',
+    'самолёт',
+    'корабль',
+    'автобус',
+    'поезд',
+    'радуга',
+    'облако',
+    'фонтан',
+    'замок',
+    'маяк',
+    'мост',
+    'башня',
+    'корона',
+    'зонт',
+    'очки',
+    'гитара',
+    'пианино',
+    'ракета',
+    'планета',
+    'робот',
+  ],
+  hard: [
+    'библиотека',
+    'телескоп',
+    'микроскоп',
+    'акробат',
+    'вулкан',
+    'лабиринт',
+    'пирамида',
+    'водопад',
+    'карусель',
+    'шахматы',
+    'архитектор',
+    'парашют',
+    'эскалатор',
+    'трамплин',
+    'аквариум',
+    'метрополитен',
+    'обсерватория',
+    'бумеранг',
+    'экскаватор',
+    'скалолаз',
+  ],
+} as const;
 
 const makeMask = (word: string): string =>
   Array.from(word)
@@ -69,9 +136,16 @@ const getWinners = (state: RoomState): string[] => {
   return state.players.filter((player) => player.score === maxScore).map((player) => player.id);
 };
 
+const pickRandom = <T>(array: readonly T[]): T | undefined =>
+  array[Math.floor(Math.random() * array.length)];
+
 const buildWordOptions = (count: number): string[] => {
-  const shuffled = [...WORD_BANK].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.max(1, count));
+  const targetCount = Math.max(1, Math.floor(count));
+  const allWords = [...WORD_BANK.easy, ...WORD_BANK.medium, ...WORD_BANK.hard];
+  const uniqueWords = [...new Set(allWords)];
+  const shuffled = [...uniqueWords].sort(() => Math.random() - 0.5);
+
+  return shuffled.slice(0, Math.min(targetCount, shuffled.length));
 };
 
 export class GameEngine {
@@ -352,7 +426,7 @@ export class GameEngine {
       return;
     }
 
-    const autoSelectedWord = state.wordOptions[0] ?? WORD_BANK[0] ?? 'apple';
+    const autoSelectedWord = pickRandom(state.wordOptions) ?? pickRandom(WORD_BANK.easy) ?? 'кот';
     await this.transitionToDrawing(state, autoSelectedWord);
   }
 
