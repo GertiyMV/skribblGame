@@ -14,7 +14,9 @@ import {
   type ClientToServerEventPayloads,
 } from '@skribbl/shared';
 
-export type RoomState = GameState;
+export type RoomState = GameState & {
+  word: string;
+};
 
 const roomKey = (roomId: string): string => `skribbl:room:${roomId}`;
 
@@ -61,6 +63,7 @@ export const createInitialRoomState = (params: {
     leaderPlayerId: params.ownerPlayerId,
     roundEndAt: nowIso,
     wordOptions: [],
+    word: '',
     wordMask: '',
     wordLength: 0,
     hintsUsed: 0,

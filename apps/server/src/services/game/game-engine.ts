@@ -13,6 +13,7 @@ import type { GameSocket, RoomEmitterTarget } from '../../types/socket.js';
 import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
 import {
   createGameOverEvent,
+  createHintUpdateEvent,
   createJoinErrorEvent,
   createRoundEndEvent,
   createRoundStartEvent,
@@ -26,6 +27,7 @@ interface RoomTimerState {
   wordSelectionTimer: TimerHandle | null;
   drawingTimer: TimerHandle | null;
   roundEndTimer: TimerHandle | null;
+  hintTimers: TimerHandle[];
 }
 
 const WORD_BANK = {
@@ -350,7 +352,12 @@ export class GameEngine {
   private getOrCreateRoomTimers(roomId: string): RoomTimerState {
     let timers = this.roomTimers.get(roomId);
     if (!timers) {
-      timers = { wordSelectionTimer: null, drawingTimer: null, roundEndTimer: null };
+      timers = {
+        wordSelectionTimer: null,
+        drawingTimer: null,
+        roundEndTimer: null,
+        hintTimers: [],
+      };
       this.roomTimers.set(roomId, timers);
     }
     return timers;
@@ -371,8 +378,22 @@ export class GameEngine {
     if (timers.roundEndTimer) {
       this.cancelTimer(timers.roundEndTimer);
     }
+    for (const handle of timers.hintTimers) {
+      this.cancelTimer(handle);
+    }
 
     this.roomTimers.delete(roomId);
+  }
+
+  private clearHintTimers(roomId: string): void {
+    const timers = this.roomTimers.get(roomId);
+    if (!timers) {
+      return;
+    }
+    for (const handle of timers.hintTimers) {
+      this.cancelTimer(handle);
+    }
+    timers.hintTimers = [];
   }
 
   private scheduleWordSelectionTimeout(roomId: string, miniRoundNumber: number): void {
@@ -412,6 +433,76 @@ export class GameEngine {
     }, ROUND_END_DURATION_MS);
   }
 
+  private scheduleHintTimers(
+    roomId: string,
+    miniRoundNumber: number,
+    roundTimeSec: number,
+    hintsTotal: number,
+  ): void {
+    const timers = this.getOrCreateRoomTimers(roomId);
+    for (const handle of timers.hintTimers) {
+      this.cancelTimer(handle);
+    }
+    timers.hintTimers = [];
+
+    for (let i = 0; i < hintsTotal; i++) {
+      const delayMs = Math.floor(((i + 1) / (hintsTotal + 1)) * roundTimeSec * 1000);
+      const handle = this.scheduleTimer(() => {
+        void this.handleHintTimeout(roomId, miniRoundNumber);
+      }, delayMs);
+      timers.hintTimers.push(handle);
+    }
+  }
+
+  private revealHint(word: string, mask: string): string {
+    const chars = mask.split(' ');
+    const unrevealedIndices = chars.reduce<number[]>((acc, char, index) => {
+      if (char === '_') acc.push(index);
+      return acc;
+    }, []);
+
+    // Keep at least one character unrevealed
+    if (unrevealedIndices.length <= 1) {
+      return mask;
+    }
+
+    const randomIndex = unrevealedIndices[Math.floor(Math.random() * unrevealedIndices.length)]!;
+    const wordChars = Array.from(word);
+    const updated = [...chars];
+    updated[randomIndex] = wordChars[randomIndex]!;
+
+    return updated.join(' ');
+  }
+
+  private async handleHintTimeout(roomId: string, miniRoundNumber: number): Promise<void> {
+    const state = await getRoomState(this.redis, roomId);
+    if (!state) {
+      return;
+    }
+
+    if (
+      state.phase !== GamePhase.InGame ||
+      state.roundPhase !== RoundPhase.Drawing ||
+      state.miniRoundNumber !== miniRoundNumber
+    ) {
+      return;
+    }
+
+    const newMask = this.revealHint(state.word, state.wordMask);
+    if (newMask === state.wordMask) {
+      return;
+    }
+
+    const updatedState: RoomState = {
+      ...state,
+      wordMask: newMask,
+      hintsUsed: state.hintsUsed + 1,
+    };
+
+    await saveRoomState(this.redis, updatedState);
+    emitToRoom(this.roomEmitterTarget, roomId, 'hint_update', createHintUpdateEvent(updatedState));
+  }
+
   private async handleWordSelectionTimeout(roomId: string, miniRoundNumber: number): Promise<void> {
     const state = await getRoomState(this.redis, roomId);
     if (!state) {
@@ -443,6 +534,7 @@ export class GameEngine {
       phase: GamePhase.InGame,
       roundPhase: RoundPhase.Drawing,
       roundEndAt,
+      word: chosenWord,
       wordOptions: [],
       wordMask: makeMask(chosenWord),
       wordLength: Array.from(chosenWord).length,
@@ -455,6 +547,12 @@ export class GameEngine {
       drawingState.roomId,
       'round_start',
       createRoundStartEvent(drawingState),
+    );
+    this.scheduleHintTimers(
+      drawingState.roomId,
+      drawingState.miniRoundNumber,
+      drawingState.settings.roundTimeSec,
+      drawingState.hintsTotal,
     );
     this.scheduleDrawingTimeout(
       drawingState.roomId,
@@ -476,6 +574,8 @@ export class GameEngine {
     ) {
       return;
     }
+
+    this.clearHintTimers(roomId);
 
     const nextLeaderPlayerId = getNextLeaderPlayerId(state);
     const roundEndAt = new Date(Date.now() + ROUND_END_DURATION_MS).toISOString();
