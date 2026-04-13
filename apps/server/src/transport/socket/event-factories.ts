@@ -154,6 +154,17 @@ export const createRoundEndEvent = (
   nextLeaderPlayerId,
 });
 
+export const createHintUpdateEvent = (
+  state: RoomState,
+): ServerToClientEventPayloads['hint_update'] => ({
+  eventId: randomUUID(),
+  ts: nowIso(),
+  roomId: state.roomId,
+  mask: state.wordMask,
+  hintsUsed: state.hintsUsed,
+  hintsTotal: state.hintsTotal,
+});
+
 export const createGameOverEvent = (
   state: RoomState,
   winners: string[],

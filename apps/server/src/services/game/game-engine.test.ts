@@ -77,7 +77,16 @@ const makeFakeTimers = () => {
     }
   };
 
-  return { fakeSetTimeout, fakeClearTimeout, tick };
+  // Fires only the timer with the lowest ID (i.e. scheduled earliest)
+  const tickFirst = (): void => {
+    if (pending.size === 0) return;
+    const firstId = Math.min(...pending.keys());
+    const fn = pending.get(firstId)!;
+    pending.delete(firstId);
+    fn();
+  };
+
+  return { fakeSetTimeout, fakeClearTimeout, tick, tickFirst };
 };
 
 const baseState = (overrides: Partial<RoomState> = {}): RoomState => ({
@@ -89,10 +98,11 @@ const baseState = (overrides: Partial<RoomState> = {}): RoomState => ({
   leaderPlayerId: 'owner-id',
   roundEndAt: '2026-04-08T12:00:00.000Z',
   wordOptions: [],
+  word: '',
   wordMask: '',
   wordLength: 0,
   hintsUsed: 0,
-  hintsTotal: 3,
+  hintsTotal: 0,
   players: [
     {
       id: 'owner-id',
@@ -118,7 +128,7 @@ const baseState = (overrides: Partial<RoomState> = {}): RoomState => ({
     roundTimeSec: 80,
     roundsCount: 1,
     wordChoicesCount: 3,
-    hintsCount: 3,
+    hintsCount: 0,
     language: 'ru',
     useCustomWordsOnly: false,
   },
@@ -337,6 +347,274 @@ describe('GameEngine', () => {
     assert.ok(s);
     assert.equal(s.roundPhase, RoundPhase.WordSelection);
     assert.equal(s.leaderPlayerId, 'p2');
+  });
+
+  it('при hintsCount=0 таймеры подсказок не планируются и hint_update не эмитится', async () => {
+    const state = baseState({ totalMiniRounds: 1, miniRoundNumber: 0 });
+    // hintsCount: 0 is already the default in baseState
+    const { redis } = createInMemoryRedis(state);
+    const { roomEmitterTarget, events: roomEvents } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+    // word_selection timeout → drawing (only drawing timer scheduled, no hint timers)
+    timers.tick();
+    await flushAsync();
+    // drawing timeout → round_end
+    timers.tick();
+    await flushAsync();
+
+    const hintEvents = roomEvents.filter((e) => e.event === 'hint_update');
+    assert.equal(hintEvents.length, 0);
+  });
+
+  it('подсказка выдаётся по таймеру, маска обновляется и hint_update эмитится', async () => {
+    const state = baseState({
+      totalMiniRounds: 1,
+      miniRoundNumber: 0,
+      hintsTotal: 1,
+      settings: {
+        maxPlayers: 8,
+        roundTimeSec: 60,
+        roundsCount: 1,
+        wordChoicesCount: 3,
+        hintsCount: 1,
+        language: 'ru',
+        useCustomWordsOnly: false,
+      },
+    });
+    const { redis, storage } = createInMemoryRedis(state);
+    const { roomEmitterTarget, events: roomEvents } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+
+    // word_selection timeout → drawing; подменяем word и wordOptions в хранилище
+    timers.tick();
+    await flushAsync();
+
+    const afterStart = await getRoomState(redis, state.roomId);
+    assert.ok(afterStart);
+    assert.equal(afterStart.roundPhase, RoundPhase.Drawing);
+
+    // Подменяем слово, чтобы знать точное значение
+    storage.set(
+      `skribbl:room:${state.roomId}`,
+      JSON.stringify({ ...afterStart, word: 'кот', wordMask: '_ _ _', wordLength: 3 }),
+    );
+
+    // Первый pending таймер — подсказка (hint timer, ID ниже drawing timer)
+    timers.tickFirst();
+    await flushAsync();
+
+    // Читаем состояние первым — это добавляет дополнительные микрозадачи,
+    // необходимые для завершения handleHintTimeout перед проверкой событий
+    const afterHint = await getRoomState(redis, state.roomId);
+    assert.ok(afterHint);
+    assert.equal(afterHint.hintsUsed, 1);
+
+    // Должна быть раскрыта ровно одна буква из "кот"
+    const maskChars = afterHint.wordMask.split(' ');
+    const revealedCount = maskChars.filter((c) => c !== '_').length;
+    assert.equal(revealedCount, 1);
+    // Раскрытая буква должна быть из слова "кот"
+    const wordChars = Array.from('кот');
+    for (let i = 0; i < maskChars.length; i++) {
+      if (maskChars[i] !== '_') {
+        assert.equal(maskChars[i], wordChars[i]);
+      }
+    }
+
+    const hintEvents = roomEvents.filter((e) => e.event === 'hint_update');
+    assert.equal(hintEvents.length, 1);
+  });
+
+  it('две подсказки выдаются по таймерам на 33% и 66% — маска обновляется дважды', async () => {
+    const state = baseState({
+      totalMiniRounds: 1,
+      miniRoundNumber: 0,
+      hintsTotal: 2,
+      settings: {
+        maxPlayers: 8,
+        roundTimeSec: 60,
+        roundsCount: 1,
+        wordChoicesCount: 3,
+        hintsCount: 2,
+        language: 'ru',
+        useCustomWordsOnly: false,
+      },
+    });
+    const { redis, storage } = createInMemoryRedis(state);
+    const { roomEmitterTarget, events: roomEvents } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+    timers.tick(); // word_selection timeout → drawing
+    await flushAsync();
+
+    const afterStart = await getRoomState(redis, state.roomId);
+    assert.ok(afterStart);
+    // Подменяем слово с достаточной длиной (>= 3 символов) для 2 подсказок
+    storage.set(
+      `skribbl:room:${state.roomId}`,
+      JSON.stringify({ ...afterStart, word: 'река', wordMask: '_ _ _ _', wordLength: 4 }),
+    );
+
+    // Первая подсказка
+    timers.tickFirst();
+    await flushAsync();
+
+    const afterHint1 = await getRoomState(redis, state.roomId);
+    assert.ok(afterHint1);
+    assert.equal(afterHint1.hintsUsed, 1);
+    const revealed1 = afterHint1.wordMask.split(' ').filter((c) => c !== '_').length;
+    assert.equal(revealed1, 1);
+
+    // Вторая подсказка
+    timers.tickFirst();
+    await flushAsync();
+
+    const afterHint2 = await getRoomState(redis, state.roomId);
+    assert.ok(afterHint2);
+    assert.equal(afterHint2.hintsUsed, 2);
+    const revealed2 = afterHint2.wordMask.split(' ').filter((c) => c !== '_').length;
+    assert.equal(revealed2, 2);
+
+    // Итого два hint_update
+    const hintEvents = roomEvents.filter((e) => e.event === 'hint_update');
+    assert.equal(hintEvents.length, 2);
+  });
+
+  it('подсказка не раскрывает последний нераскрытый символ', async () => {
+    const state = baseState({
+      totalMiniRounds: 1,
+      miniRoundNumber: 0,
+      hintsTotal: 1,
+      settings: {
+        maxPlayers: 8,
+        roundTimeSec: 60,
+        roundsCount: 1,
+        wordChoicesCount: 3,
+        hintsCount: 1,
+        language: 'ru',
+        useCustomWordsOnly: false,
+      },
+    });
+    const { redis, storage } = createInMemoryRedis(state);
+    const { roomEmitterTarget, events: roomEvents } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+    timers.tick(); // word_selection timeout → drawing
+    await flushAsync();
+
+    const afterStart = await getRoomState(redis, state.roomId);
+    assert.ok(afterStart);
+    // Подменяем слово "лес" с маской, где уже раскрыты 2 из 3 букв — остался 1 символ
+    storage.set(
+      `skribbl:room:${state.roomId}`,
+      JSON.stringify({
+        ...afterStart,
+        word: 'лес',
+        wordMask: 'л е _',
+        wordLength: 3,
+        hintsUsed: 2,
+      }),
+    );
+
+    // Таймер подсказки срабатывает, но остался только 1 нераскрытый символ — маска не меняется
+    timers.tickFirst();
+    await flushAsync();
+
+    const afterHint = await getRoomState(redis, state.roomId);
+    assert.ok(afterHint);
+    assert.equal(afterHint.wordMask, 'л е _');
+    assert.equal(afterHint.hintsUsed, 2); // не изменился
+
+    const hintEvents = roomEvents.filter((e) => e.event === 'hint_update');
+    assert.equal(hintEvents.length, 0);
+  });
+
+  it('оставшиеся подсказки не выдаются после завершения drawing', async () => {
+    const state = baseState({
+      totalMiniRounds: 1,
+      miniRoundNumber: 0,
+      hintsTotal: 2,
+      settings: {
+        maxPlayers: 8,
+        roundTimeSec: 60,
+        roundsCount: 1,
+        wordChoicesCount: 3,
+        hintsCount: 2,
+        language: 'ru',
+        useCustomWordsOnly: false,
+      },
+    });
+    const { redis, storage } = createInMemoryRedis(state);
+    const { roomEmitterTarget, events: roomEvents } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+    timers.tick(); // word_selection timeout → drawing
+    await flushAsync();
+
+    const afterStart = await getRoomState(redis, state.roomId);
+    assert.ok(afterStart);
+    storage.set(
+      `skribbl:room:${state.roomId}`,
+      JSON.stringify({ ...afterStart, word: 'море', wordMask: '_ _ _ _', wordLength: 4 }),
+    );
+
+    // Первая подсказка срабатывает нормально
+    timers.tickFirst();
+    await flushAsync();
+
+    // Следующий таймер — вторая подсказка (второй hint timer).
+    // Вместо её срабатывания — сначала симулируем завершение drawing через изменение фазы.
+    // Сбрасываем фазу в round_end вручную, чтобы проверить что hint_timeout игнорируется.
+    const afterHint1 = await getRoomState(redis, state.roomId);
+    assert.ok(afterHint1);
+    storage.set(
+      `skribbl:room:${state.roomId}`,
+      JSON.stringify({ ...afterHint1, roundPhase: RoundPhase.RoundEnd }),
+    );
+
+    // Вторая подсказка срабатывает, но раунд уже в RoundEnd — ничего не делает
+    timers.tickFirst();
+    await flushAsync();
+
+    const afterHint2 = await getRoomState(redis, state.roomId);
+    assert.ok(afterHint2);
+    assert.equal(afterHint2.hintsUsed, 1); // не изменился
+    assert.equal(afterHint2.wordMask.split(' ').filter((c) => c !== '_').length, 1); // не изменился
+
+    const hintEvents = roomEvents.filter((e) => e.event === 'hint_update');
+    assert.equal(hintEvents.length, 1); // только первая подсказка
   });
 
   it('отклоняет choose_word, если слово не входит в wordOptions', async () => {
