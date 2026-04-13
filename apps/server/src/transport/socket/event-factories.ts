@@ -111,6 +111,7 @@ export const createRateLimitEvent = (params: {
 
 export const createRoundStartEvent = (
   state: RoomState,
+  options: { wordOptions?: string[] } = {},
 ): ServerToClientEventPayloads['round_start'] => {
   const baseEvent = {
     eventId: randomUUID(),
@@ -126,7 +127,7 @@ export const createRoundStartEvent = (
     return {
       ...baseEvent,
       phase: 'word_selection',
-      wordOptions: state.wordOptions,
+      wordOptions: options.wordOptions ?? state.wordOptions,
       wordMask: '',
       wordLength: 0,
     };
@@ -177,4 +178,35 @@ export const createGameOverEvent = (
     playerId: player.id,
     score: player.score,
   })),
+});
+
+export const createGuessResultEvent = (params: {
+  roomId: string;
+  playerId: string;
+  messageId: string;
+  result: 'correct' | 'incorrect' | 'near_miss' | 'blocked';
+  awardedScore?: number;
+  position?: number;
+}): ServerToClientEventPayloads['guess_result'] => ({
+  eventId: randomUUID(),
+  ts: nowIso(),
+  roomId: params.roomId,
+  playerId: params.playerId,
+  messageId: params.messageId,
+  ok: true,
+  result: params.result,
+  awardedScore: params.awardedScore,
+  position: params.position,
+});
+
+export const createWordRevealEvent = (params: {
+  roomId: string;
+  word: string;
+  leaderPlayerId: string;
+}): ServerToClientEventPayloads['word_reveal'] => ({
+  eventId: randomUUID(),
+  ts: nowIso(),
+  roomId: params.roomId,
+  word: params.word,
+  leaderPlayerId: params.leaderPlayerId,
 });

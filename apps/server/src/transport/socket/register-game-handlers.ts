@@ -76,5 +76,14 @@ export const registerGameHandlers = (params: {
 
       await gameEngine.handleChooseWord(socket, payload);
     });
+
+    socket.on('guess', async (rawPayload) => {
+      const payload = parsePayload('guess', rawPayload);
+      if (!payload) {
+        return;
+      }
+
+      await gameEngine.handleGuess(socket, payload);
+    });
   });
 };

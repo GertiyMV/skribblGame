@@ -9,14 +9,17 @@ import { clearTimeout, setTimeout } from 'node:timers';
 import type { RedisClientType } from 'redis';
 
 import { getRoomState, saveRoomState, type RoomState } from '../../repositories/room-repository.js';
-import type { GameSocket, RoomEmitterTarget } from '../../types/socket.js';
+import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../types/socket.js';
 import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
 import {
   createGameOverEvent,
+  createGuessResultEvent,
   createHintUpdateEvent,
   createJoinErrorEvent,
   createRoundEndEvent,
   createRoundStartEvent,
+  createScoreUpdateEvent,
+  createWordRevealEvent,
 } from '../../transport/socket/event-factories.js';
 
 type TimerHandle = ReturnType<typeof setTimeout>;
@@ -104,6 +107,64 @@ const makeMask = (word: string): string =>
     .map(() => '_')
     .join(' ');
 
+const getRoundProgress = (remainingTimeSec: number, roundTimeSec: number): number =>
+  Math.min(1, Math.max(0, (roundTimeSec - remainingTimeSec) / roundTimeSec));
+
+const getGuesserTimeFactor = (progress: number): number => {
+  if (progress < 0.25) {
+    return 1;
+  }
+  if (progress < 0.5) {
+    return 0.8;
+  }
+  if (progress < 0.75) {
+    return 0.6;
+  }
+  return 0.4;
+};
+
+const getGuesserPositionBonus = (position: number): number => {
+  if (position <= 1) {
+    return 1;
+  }
+  if (position === 2) {
+    return 0.9;
+  }
+  if (position === 3) {
+    return 0.8;
+  }
+  return 0.7;
+};
+
+const calculateGuesserScore = (
+  remainingTimeSec: number,
+  roundTimeSec: number,
+  hintsUsed: number,
+  position: number,
+): number => {
+  const progress = getRoundProgress(remainingTimeSec, roundTimeSec);
+  const timeFactor = getGuesserTimeFactor(progress);
+  const hintPenaltyFactor = Math.max(0, 1 - 0.05 * hintsUsed);
+  const positionBonus = getGuesserPositionBonus(position);
+
+  return Math.min(
+    100,
+    Math.max(5, Math.round(100 * timeFactor * hintPenaltyFactor * positionBonus)),
+  );
+};
+
+const calculateLeaderContribution = (
+  remainingTimeSec: number,
+  roundTimeSec: number,
+  roundParticipantsCount: number,
+): number => {
+  const progress = getRoundProgress(remainingTimeSec, roundTimeSec);
+  const timeFactor = progress < 1 / 3 ? 1 : progress < 2 / 3 ? 0.7 : 0.5;
+  const leaderPerGuess = 100 / Math.max(1, roundParticipantsCount);
+
+  return Math.round(leaderPerGuess * timeFactor);
+};
+
 const buildDrawingState = (state: RoomState): RoomState => ({
   ...state,
   players: state.players.map((player) => ({
@@ -156,16 +217,41 @@ export class GameEngine {
   private readonly roomEmitterTarget: RoomEmitterTarget;
   private readonly scheduleTimer: SetTimeoutFn;
   private readonly cancelTimer: ClearTimeoutFn;
+  private readonly namespace?: GameNamespace;
 
   constructor(
     redis: RedisClientType,
     roomEmitterTarget: RoomEmitterTarget,
-    timerFns: { setTimeout?: SetTimeoutFn; clearTimeout?: ClearTimeoutFn } = {},
+    timerFns: {
+      setTimeout?: SetTimeoutFn;
+      clearTimeout?: ClearTimeoutFn;
+      namespace?: GameNamespace;
+    } = {},
   ) {
     this.redis = redis;
     this.roomEmitterTarget = roomEmitterTarget;
     this.scheduleTimer = timerFns.setTimeout ?? setTimeout;
     this.cancelTimer = timerFns.clearTimeout ?? clearTimeout;
+    this.namespace = timerFns.namespace;
+  }
+
+  private async emitRoundStart(state: RoomState): Promise<void> {
+    if (state.roundPhase !== RoundPhase.WordSelection || !this.namespace) {
+      emitToRoom(this.roomEmitterTarget, state.roomId, 'round_start', createRoundStartEvent(state));
+      return;
+    }
+
+    const sockets = await this.namespace.in(state.roomId).fetchSockets();
+    const leaderPayload = createRoundStartEvent(state, { wordOptions: state.wordOptions });
+    const guessingPayload = createRoundStartEvent(state, { wordOptions: [] });
+
+    for (const roomSocket of sockets) {
+      emitToSocket(
+        roomSocket as unknown as GameSocket,
+        'round_start',
+        roomSocket.data.playerId === state.leaderPlayerId ? leaderPayload : guessingPayload,
+      );
+    }
   }
 
   /**
@@ -262,12 +348,7 @@ export class GameEngine {
     };
 
     await saveRoomState(this.redis, updatedState);
-    emitToRoom(
-      this.roomEmitterTarget,
-      updatedState.roomId,
-      'round_start',
-      createRoundStartEvent(updatedState),
-    );
+    await this.emitRoundStart(updatedState);
 
     this.scheduleWordSelectionTimeout(updatedState.roomId, updatedState.miniRoundNumber);
   }
@@ -539,15 +620,13 @@ export class GameEngine {
       wordMask: makeMask(chosenWord),
       wordLength: Array.from(chosenWord).length,
       hintsUsed: 0,
+      roundParticipantsCount: state.players.filter(
+        (player) => player.connectionStatus === 'connected',
+      ).length,
     };
 
     await saveRoomState(this.redis, drawingState);
-    emitToRoom(
-      this.roomEmitterTarget,
-      drawingState.roomId,
-      'round_start',
-      createRoundStartEvent(drawingState),
-    );
+    await this.emitRoundStart(drawingState);
     this.scheduleHintTimers(
       drawingState.roomId,
       drawingState.miniRoundNumber,
@@ -579,6 +658,7 @@ export class GameEngine {
 
     const nextLeaderPlayerId = getNextLeaderPlayerId(state);
     const roundEndAt = new Date(Date.now() + ROUND_END_DURATION_MS).toISOString();
+
     const roundEndState: RoomState = {
       ...state,
       roundPhase: RoundPhase.RoundEnd,
@@ -591,6 +671,23 @@ export class GameEngine {
     };
 
     await saveRoomState(this.redis, roundEndState);
+
+    emitToRoom(
+      this.roomEmitterTarget,
+      roundEndState.roomId,
+      'score_update',
+      createScoreUpdateEvent(roundEndState),
+    );
+    emitToRoom(
+      this.roomEmitterTarget,
+      roundEndState.roomId,
+      'word_reveal',
+      createWordRevealEvent({
+        roomId: state.roomId,
+        word: state.word,
+        leaderPlayerId: state.leaderPlayerId,
+      }),
+    );
     emitToRoom(
       this.roomEmitterTarget,
       roundEndState.roomId,
@@ -599,6 +696,211 @@ export class GameEngine {
     );
 
     this.scheduleRoundEndTimeout(roundEndState.roomId, roundEndState.miniRoundNumber);
+  }
+
+  /**
+   * Обрабатывает попытку угадать слово.
+   */
+  async handleGuess(
+    socket: GameSocket,
+    payload: ClientToServerEventPayloads['guess'],
+  ): Promise<void> {
+    const { playerId, roomId: socketRoomId } = socket.data;
+    if (!playerId || socketRoomId !== payload.roomId) {
+      emitToSocket(
+        socket,
+        'guess_result',
+        createJoinErrorEvent({
+          roomId: payload.roomId,
+          code: 'forbidden_action',
+          message: 'Invalid room context',
+        }),
+      );
+      return;
+    }
+
+    const state = await getRoomState(this.redis, payload.roomId);
+    if (!state) {
+      emitToSocket(
+        socket,
+        'guess_result',
+        createJoinErrorEvent({
+          roomId: payload.roomId,
+          code: 'room_not_found',
+          message: 'Room not found',
+        }),
+      );
+      return;
+    }
+
+    if (state.phase !== GamePhase.InGame || state.roundPhase !== RoundPhase.Drawing) {
+      emitToSocket(
+        socket,
+        'guess_result',
+        createGuessResultEvent({
+          roomId: state.roomId,
+          playerId,
+          messageId: payload.messageId,
+          result: 'blocked',
+        }),
+      );
+      return;
+    }
+
+    const currentPlayer = getCurrentPlayer(state, playerId);
+    if (!currentPlayer) {
+      emitToSocket(
+        socket,
+        'guess_result',
+        createJoinErrorEvent({
+          roomId: state.roomId,
+          code: 'forbidden_action',
+          message: 'Player not found in room',
+        }),
+      );
+      return;
+    }
+
+    if (currentPlayer.id === state.leaderPlayerId || currentPlayer.guessed) {
+      emitToSocket(
+        socket,
+        'guess_result',
+        createGuessResultEvent({
+          roomId: state.roomId,
+          playerId,
+          messageId: payload.messageId,
+          result: 'blocked',
+        }),
+      );
+      return;
+    }
+
+    const isCorrect = payload.text.trim().toLowerCase() === state.word.toLowerCase();
+
+    if (!isCorrect) {
+      emitToRoom(
+        this.roomEmitterTarget,
+        state.roomId,
+        'guess_result',
+        createGuessResultEvent({
+          roomId: state.roomId,
+          playerId,
+          messageId: payload.messageId,
+          result: 'incorrect',
+        }),
+      );
+      return;
+    }
+
+    const correctGuessersBeforeThis = state.players.filter(
+      (p) => p.guessed && p.id !== state.leaderPlayerId,
+    );
+    const position = correctGuessersBeforeThis.length + 1;
+
+    const roundEndTimestamp = new Date(state.roundEndAt).getTime();
+    const remainingTimeSec = Math.max(0, (roundEndTimestamp - Date.now()) / 1000);
+    const awardedScore = calculateGuesserScore(
+      remainingTimeSec,
+      state.settings.roundTimeSec,
+      state.hintsUsed,
+      position,
+    );
+    const leaderContribution = calculateLeaderContribution(
+      remainingTimeSec,
+      state.settings.roundTimeSec,
+      state.roundParticipantsCount,
+    );
+
+    const updatedState: RoomState = {
+      ...state,
+      players: state.players.map((p) =>
+        p.id === playerId
+          ? { ...p, score: p.score + awardedScore, guessed: true }
+          : p.id === state.leaderPlayerId
+            ? { ...p, score: p.score + leaderContribution }
+            : p,
+      ),
+    };
+
+    await saveRoomState(this.redis, updatedState);
+
+    emitToRoom(
+      this.roomEmitterTarget,
+      state.roomId,
+      'guess_result',
+      createGuessResultEvent({
+        roomId: state.roomId,
+        playerId,
+        messageId: payload.messageId,
+        result: 'correct',
+        awardedScore,
+        position,
+      }),
+    );
+
+    emitToRoom(
+      this.roomEmitterTarget,
+      state.roomId,
+      'score_update',
+      createScoreUpdateEvent(updatedState),
+    );
+
+    const guessers = updatedState.players.filter(
+      (p) => p.id !== updatedState.leaderPlayerId && p.connectionStatus === 'connected',
+    );
+    if (guessers.length > 0 && guessers.every((p) => p.guessed)) {
+      await this.endRoundAllGuessed(updatedState);
+    }
+  }
+
+  private async endRoundAllGuessed(state: RoomState): Promise<void> {
+    this.clearHintTimers(state.roomId);
+    const timers = this.getOrCreateRoomTimers(state.roomId);
+    if (timers.drawingTimer) {
+      this.cancelTimer(timers.drawingTimer);
+      timers.drawingTimer = null;
+    }
+
+    const nextLeaderPlayerId = getNextLeaderPlayerId(state);
+    const roundEndAt = new Date(Date.now() + ROUND_END_DURATION_MS).toISOString();
+
+    const roundEndState: RoomState = {
+      ...state,
+      roundPhase: RoundPhase.RoundEnd,
+      roundEndAt,
+      leaderPlayerId: nextLeaderPlayerId,
+      players: state.players.map((p) => ({
+        ...p,
+        role: p.id === nextLeaderPlayerId ? 'drawing' : 'guessing',
+      })),
+    };
+
+    await saveRoomState(this.redis, roundEndState);
+
+    emitToRoom(
+      this.roomEmitterTarget,
+      state.roomId,
+      'score_update',
+      createScoreUpdateEvent(roundEndState),
+    );
+    emitToRoom(
+      this.roomEmitterTarget,
+      state.roomId,
+      'word_reveal',
+      createWordRevealEvent({
+        roomId: state.roomId,
+        word: state.word,
+        leaderPlayerId: state.leaderPlayerId,
+      }),
+    );
+    emitToRoom(
+      this.roomEmitterTarget,
+      state.roomId,
+      'round_end',
+      createRoundEndEvent(roundEndState, 'all_guessed', nextLeaderPlayerId),
+    );
+
+    this.scheduleRoundEndTimeout(state.roomId, state.miniRoundNumber);
   }
 
   private async handleRoundEndTimeout(roomId: string, miniRoundNumber: number): Promise<void> {
@@ -647,12 +949,7 @@ export class GameEngine {
     };
 
     await saveRoomState(this.redis, nextState);
-    emitToRoom(
-      this.roomEmitterTarget,
-      nextState.roomId,
-      'round_start',
-      createRoundStartEvent(nextState),
-    );
+    await this.emitRoundStart(nextState);
     this.scheduleWordSelectionTimeout(nextState.roomId, nextState.miniRoundNumber);
   }
 }

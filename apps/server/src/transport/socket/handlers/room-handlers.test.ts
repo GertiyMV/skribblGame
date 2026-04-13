@@ -50,6 +50,7 @@ const BASE_ROOM_STATE: RoomState = {
     language: 'ru',
     useCustomWordsOnly: false,
   },
+  roundParticipantsCount: 1,
 };
 
 const makeRedisMock = (roomState: RoomState | null) =>
