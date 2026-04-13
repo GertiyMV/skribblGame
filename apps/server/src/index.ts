@@ -72,7 +72,7 @@ const createServer = async (): Promise<void> => {
     },
   );
 
-  const gameEngine = new GameEngine(redis, roomEmitterTarget);
+  const gameEngine = new GameEngine(redis, roomEmitterTarget, { namespace });
 
   registerGameHandlers({ io: namespace, roomEmitterTarget, redis, roomManager, gameEngine });
 

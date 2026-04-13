@@ -93,7 +93,7 @@ const serverRoundStartWordSelectionSchema = eventMetaSchema.extend({
   totalMiniRounds: z.number().int().min(1),
   leaderPlayerId: playerIdSchema,
   roundEndAt: timestampSchema,
-  wordOptions: z.array(wordSchema).min(1),
+  wordOptions: z.array(wordSchema),
   wordMask: z.literal(''),
   wordLength: z.literal(0),
 });

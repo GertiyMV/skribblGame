@@ -16,6 +16,7 @@ import {
 
 export type RoomState = GameState & {
   word: string;
+  roundParticipantsCount: number;
 };
 
 const roomKey = (roomId: string): string => `skribbl:room:${roomId}`;
@@ -70,6 +71,7 @@ export const createInitialRoomState = (params: {
     hintsTotal: settings.hintsCount,
     players,
     settings,
+    roundParticipantsCount: players.length,
   };
 };
 
