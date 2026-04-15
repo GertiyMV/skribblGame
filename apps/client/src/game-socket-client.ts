@@ -2,6 +2,7 @@ import {
   RECONNECT_MAX_ATTEMPTS,
   type ClientToServerEventPayloads,
   type ClientToServerEvents,
+  type ReconnectToken,
   type ServerToClientEventPayloads,
   type ServerToClientEvents,
 } from '@skribbl/shared';
@@ -42,7 +43,7 @@ export class GameSocketClient {
 
   private pendingJoinPayload: JoinPayload | null = null;
 
-  private reconnectToken: string | null = null;
+  private reconnectToken: ReconnectToken | null = null;
 
   public constructor(options: GameSocketClientOptions) {
     const namespace = options.namespace ?? '/game';

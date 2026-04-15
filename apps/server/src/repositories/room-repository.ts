@@ -2,32 +2,31 @@ import type { RedisClientType } from 'redis';
 
 import {
   DEFAULT_HINTS_COUNT,
-  DEFAULT_WORD_CHOICES,
   DEFAULT_ROOM_MAX_PLAYERS,
-  DEFAULT_ROUNDS_COUNT,
   DEFAULT_ROUND_TIME_SEC,
-  type GameState,
+  DEFAULT_ROUNDS_COUNT,
+  DEFAULT_WORD_CHOICES,
   GamePhase,
+  type Nickname,
+  type PlayerId,
   type Player,
   RoundPhase,
+  type RoomId,
   type RoomSettings,
   type ClientToServerEventPayloads,
 } from '@skribbl/shared';
 
-export type RoomState = GameState & {
-  word: string;
-  roundParticipantsCount: number;
-};
+import type { RoomState } from '../types/types-game.js';
 
-const roomKey = (roomId: string): string => `skribbl:room:${roomId}`;
+const roomKey = (roomId: RoomId): string => `skribbl:room:${roomId}`;
 
 export const calculateTotalMiniRounds = (roundsCount: number, playersCount: number): number =>
   roundsCount * playersCount;
 
 export const createInitialRoomState = (params: {
-  roomId: string;
-  ownerPlayerId: string;
-  ownerNickname: string;
+  roomId: RoomId;
+  ownerPlayerId: PlayerId;
+  ownerNickname: Nickname;
   settingsOverride?: ClientToServerEventPayloads['create_room']['settingsOverride'];
 }): RoomState => {
   const nowIso = new Date().toISOString();
@@ -82,7 +81,7 @@ export const saveRoomState = async (redis: RedisClientType, state: RoomState): P
 
 export const getRoomState = async (
   redis: RedisClientType,
-  roomId: string,
+  roomId: RoomId,
 ): Promise<RoomState | null> => {
   const key = roomKey(roomId);
   const json = await redis.get(key);
@@ -94,7 +93,7 @@ export const getRoomState = async (
   return JSON.parse(json) as RoomState;
 };
 
-export const deleteRoomState = async (redis: RedisClientType, roomId: string): Promise<void> => {
+export const deleteRoomState = async (redis: RedisClientType, roomId: RoomId): Promise<void> => {
   const key = roomKey(roomId);
   await redis.del(key);
 };

@@ -3,14 +3,11 @@ import { randomUUID } from 'node:crypto';
 import type { ClientToServerEventPayloads } from '@skribbl/shared';
 import type { RedisClientType } from 'redis';
 
-import type { RoomState } from '../../repositories/room-repository.js';
 import { getRoomState, saveRoomState } from '../../repositories/room-repository.js';
-import {
-  getSession,
-  replaceSession,
-  type PlayerSession,
-} from '../../repositories/session-repository.js';
-import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../types/socket.js';
+import { getSession, replaceSession } from '../../repositories/session-repository.js';
+import type { RoomState } from '../../types/types-game.js';
+import type { PlayerSession } from '../../types/types-session.js';
+import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../types/types-socket.js';
 import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
 import {
   createPlayerJoinedEvent,

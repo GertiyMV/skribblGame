@@ -2,16 +2,11 @@ import type { RedisClientType } from 'redis';
 
 import { RECONNECT_TIMEOUT_MS } from '@skribbl/shared';
 
-export type PlayerSession = {
-  sessionId: string;
-  roomId: string;
-  playerId: string;
-  nickname: string;
-};
+import type { PlayerSession, SessionId } from '../types/types-session.js';
 
 const reconnectTtlSeconds = Math.ceil(RECONNECT_TIMEOUT_MS / 1000);
 
-const sessionKey = (sessionId: string): string => `skribbl:session:${sessionId}`;
+const sessionKey = (sessionId: SessionId): string => `skribbl:session:${sessionId}`;
 
 export const saveSession = async (
   redis: RedisClientType,
@@ -28,7 +23,7 @@ export const saveSession = async (
 
 export const getSession = async (
   redis: RedisClientType,
-  sessionId: string,
+  sessionId: SessionId,
 ): Promise<PlayerSession | null> => {
   const key = sessionKey(sessionId);
   const data = await redis.hGetAll(key);
@@ -45,21 +40,24 @@ export const getSession = async (
   };
 };
 
-export const deleteSession = async (redis: RedisClientType, sessionId: string): Promise<void> => {
+export const deleteSession = async (
+  redis: RedisClientType,
+  sessionId: SessionId,
+): Promise<void> => {
   const key = sessionKey(sessionId);
   await redis.del(key);
 };
 
 export const setSessionExpiry = async (
   redis: RedisClientType,
-  sessionId: string,
+  sessionId: SessionId,
 ): Promise<void> => {
   await redis.expire(sessionKey(sessionId), reconnectTtlSeconds);
 };
 
 export const replaceSession = async (
   redis: RedisClientType,
-  previousSessionId: string,
+  previousSessionId: SessionId,
   nextSession: PlayerSession,
 ): Promise<void> => {
   const nextKey = sessionKey(nextSession.sessionId);

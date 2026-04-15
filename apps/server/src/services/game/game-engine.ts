@@ -4,12 +4,17 @@ import {
   RoundPhase,
   WORD_SELECTION_DURATION_MS,
   type ClientToServerEventPayloads,
+  type PlayerId,
+  type RoomId,
+  type Score,
+  type Word,
 } from '@skribbl/shared';
 import { clearTimeout, setTimeout } from 'node:timers';
 import type { RedisClientType } from 'redis';
 
-import { getRoomState, saveRoomState, type RoomState } from '../../repositories/room-repository.js';
-import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../types/socket.js';
+import { getRoomState, saveRoomState } from '../../repositories/room-repository.js';
+import type { RoomState } from '../../types/types-game.js';
+import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../types/types-socket.js';
 import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
 import {
   createGameOverEvent,
@@ -141,7 +146,7 @@ const calculateGuesserScore = (
   roundTimeSec: number,
   hintsUsed: number,
   position: number,
-): number => {
+): Score => {
   const progress = getRoundProgress(remainingTimeSec, roundTimeSec);
   const timeFactor = getGuesserTimeFactor(progress);
   const hintPenaltyFactor = Math.max(0, 1 - 0.05 * hintsUsed);
@@ -157,7 +162,7 @@ const calculateLeaderContribution = (
   remainingTimeSec: number,
   roundTimeSec: number,
   roundParticipantsCount: number,
-): number => {
+): Score => {
   const progress = getRoundProgress(remainingTimeSec, roundTimeSec);
   const timeFactor = progress < 1 / 3 ? 1 : progress < 2 / 3 ? 0.7 : 0.5;
   const leaderPerGuess = 100 / Math.max(1, roundParticipantsCount);
@@ -174,10 +179,10 @@ const buildDrawingState = (state: RoomState): RoomState => ({
   })),
 });
 
-const getCurrentPlayer = (state: RoomState, playerId: string) =>
+const getCurrentPlayer = (state: RoomState, playerId: PlayerId) =>
   state.players.find((player) => player.id === playerId);
 
-const getNextLeaderPlayerId = (state: RoomState): string => {
+const getNextLeaderPlayerId = (state: RoomState): PlayerId => {
   const currentIndex = state.players.findIndex((player) => player.id === state.leaderPlayerId);
   if (currentIndex < 0 || state.players.length === 0) {
     return state.leaderPlayerId;
@@ -194,7 +199,7 @@ const getNextLeaderPlayerId = (state: RoomState): string => {
   return state.leaderPlayerId;
 };
 
-const getWinners = (state: RoomState): string[] => {
+const getWinners = (state: RoomState): PlayerId[] => {
   const maxScore = Math.max(...state.players.map((player) => player.score));
   return state.players.filter((player) => player.score === maxScore).map((player) => player.id);
 };
@@ -202,7 +207,7 @@ const getWinners = (state: RoomState): string[] => {
 const pickRandom = <T>(array: readonly T[]): T | undefined =>
   array[Math.floor(Math.random() * array.length)];
 
-const buildWordOptions = (count: number): string[] => {
+const buildWordOptions = (count: number): Word[] => {
   const targetCount = Math.max(1, Math.floor(count));
   const allWords = [...WORD_BANK.easy, ...WORD_BANK.medium, ...WORD_BANK.hard];
   const uniqueWords = [...new Set(allWords)];
@@ -212,7 +217,7 @@ const buildWordOptions = (count: number): string[] => {
 };
 
 export class GameEngine {
-  private readonly roomTimers = new Map<string, RoomTimerState>();
+  private readonly roomTimers = new Map<RoomId, RoomTimerState>();
   private readonly redis: RedisClientType;
   private readonly roomEmitterTarget: RoomEmitterTarget;
   private readonly scheduleTimer: SetTimeoutFn;
@@ -430,7 +435,7 @@ export class GameEngine {
     await this.transitionToDrawing(state, payload.word);
   }
 
-  private getOrCreateRoomTimers(roomId: string): RoomTimerState {
+  private getOrCreateRoomTimers(roomId: RoomId): RoomTimerState {
     let timers = this.roomTimers.get(roomId);
     if (!timers) {
       timers = {
@@ -444,7 +449,7 @@ export class GameEngine {
     return timers;
   }
 
-  private clearRoomTimers(roomId: string): void {
+  private clearRoomTimers(roomId: RoomId): void {
     const timers = this.roomTimers.get(roomId);
     if (!timers) {
       return;
@@ -466,7 +471,7 @@ export class GameEngine {
     this.roomTimers.delete(roomId);
   }
 
-  private clearHintTimers(roomId: string): void {
+  private clearHintTimers(roomId: RoomId): void {
     const timers = this.roomTimers.get(roomId);
     if (!timers) {
       return;
@@ -477,7 +482,7 @@ export class GameEngine {
     timers.hintTimers = [];
   }
 
-  private scheduleWordSelectionTimeout(roomId: string, miniRoundNumber: number): void {
+  private scheduleWordSelectionTimeout(roomId: RoomId, miniRoundNumber: number): void {
     const timers = this.getOrCreateRoomTimers(roomId);
     if (timers.wordSelectionTimer) {
       this.cancelTimer(timers.wordSelectionTimer);
@@ -489,7 +494,7 @@ export class GameEngine {
   }
 
   private scheduleDrawingTimeout(
-    roomId: string,
+    roomId: RoomId,
     miniRoundNumber: number,
     roundTimeSec: number,
   ): void {
@@ -503,7 +508,7 @@ export class GameEngine {
     }, roundTimeSec * 1000);
   }
 
-  private scheduleRoundEndTimeout(roomId: string, miniRoundNumber: number): void {
+  private scheduleRoundEndTimeout(roomId: RoomId, miniRoundNumber: number): void {
     const timers = this.getOrCreateRoomTimers(roomId);
     if (timers.roundEndTimer) {
       this.cancelTimer(timers.roundEndTimer);
@@ -515,7 +520,7 @@ export class GameEngine {
   }
 
   private scheduleHintTimers(
-    roomId: string,
+    roomId: RoomId,
     miniRoundNumber: number,
     roundTimeSec: number,
     hintsTotal: number,
@@ -555,7 +560,7 @@ export class GameEngine {
     return updated.join(' ');
   }
 
-  private async handleHintTimeout(roomId: string, miniRoundNumber: number): Promise<void> {
+  private async handleHintTimeout(roomId: RoomId, miniRoundNumber: number): Promise<void> {
     const state = await getRoomState(this.redis, roomId);
     if (!state) {
       return;
@@ -584,7 +589,7 @@ export class GameEngine {
     emitToRoom(this.roomEmitterTarget, roomId, 'hint_update', createHintUpdateEvent(updatedState));
   }
 
-  private async handleWordSelectionTimeout(roomId: string, miniRoundNumber: number): Promise<void> {
+  private async handleWordSelectionTimeout(roomId: RoomId, miniRoundNumber: number): Promise<void> {
     const state = await getRoomState(this.redis, roomId);
     if (!state) {
       return;
@@ -602,7 +607,7 @@ export class GameEngine {
     await this.transitionToDrawing(state, autoSelectedWord);
   }
 
-  private async transitionToDrawing(state: RoomState, chosenWord: string): Promise<void> {
+  private async transitionToDrawing(state: RoomState, chosenWord: Word): Promise<void> {
     const timers = this.getOrCreateRoomTimers(state.roomId);
     if (timers.wordSelectionTimer) {
       this.cancelTimer(timers.wordSelectionTimer);
@@ -640,7 +645,7 @@ export class GameEngine {
     );
   }
 
-  private async handleDrawingTimeout(roomId: string, miniRoundNumber: number): Promise<void> {
+  private async handleDrawingTimeout(roomId: RoomId, miniRoundNumber: number): Promise<void> {
     const state = await getRoomState(this.redis, roomId);
     if (!state) {
       return;
@@ -903,7 +908,7 @@ export class GameEngine {
     this.scheduleRoundEndTimeout(state.roomId, state.miniRoundNumber);
   }
 
-  private async handleRoundEndTimeout(roomId: string, miniRoundNumber: number): Promise<void> {
+  private async handleRoundEndTimeout(roomId: RoomId, miniRoundNumber: number): Promise<void> {
     const state = await getRoomState(this.redis, roomId);
     if (!state) {
       return;

@@ -8,17 +8,17 @@ import {
   createInitialRoomState,
   getRoomState,
   saveRoomState,
-  type RoomState,
 } from '../../../repositories/room-repository.js';
 import {
   getSession,
   saveSession,
   setSessionExpiry,
-  type PlayerSession,
 } from '../../../repositories/session-repository.js';
 import { RoomManager } from '../../../services/game/room-manager.js';
 import { attachSocketSession, tryReconnect } from '../../../services/game/session-service.js';
-import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../../types/socket.js';
+import type { RoomState } from '../../../types/types-game.js';
+import type { PlayerSession } from '../../../types/types-session.js';
+import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../../types/types-socket.js';
 import { emitToRoom, emitToSocket } from '../emitter.js';
 import {
   createJoinErrorEvent,

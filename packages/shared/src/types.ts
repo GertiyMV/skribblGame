@@ -1,15 +1,26 @@
 import { ROUND_TIME_OPTIONS_SEC } from './constants.js';
 
+export type RoomId = string;
+export type PlayerId = string;
+export type Nickname = string;
+export type StrokeId = string;
+export type MessageId = string;
+export type Word = string;
+export type HexColor = string;
+export type ReconnectToken = string;
+export type EventId = string;
+export type IsoTimestamp = string;
+export type Score = number;
+export type BrushSize = number;
+
 export type ConnectionStatus = 'connected' | 'disconnected';
-
 export type PlayerRole = 'guessing' | 'drawing' | 'spectator';
-
 export type RoundTimeSec = (typeof ROUND_TIME_OPTIONS_SEC)[number];
 
 export type Player = {
-  id: string;
-  nickname: string;
-  score: number;
+  id: PlayerId;
+  nickname: Nickname;
+  score: Score;
   isOwner: boolean;
   guessed: boolean;
   connectionStatus: ConnectionStatus;
@@ -40,14 +51,14 @@ export enum RoundPhase {
 }
 
 export type GameState = {
-  roomId: string;
+  roomId: RoomId;
   phase: GamePhase;
   roundPhase: RoundPhase;
   miniRoundNumber: number;
   totalMiniRounds: number;
-  leaderPlayerId: string;
-  roundEndAt: string;
-  wordOptions: string[];
+  leaderPlayerId: PlayerId;
+  roundEndAt: IsoTimestamp;
+  wordOptions: Word[];
   wordMask: string;
   wordLength: number;
   hintsUsed: number;
@@ -65,12 +76,12 @@ export type DrawPoint = {
 export type DrawTool = 'brush' | 'eraser' | 'fill' | 'clear';
 
 export type DrawEvent = {
-  roomId: string;
-  playerId: string;
-  strokeId: string;
+  roomId: RoomId;
+  playerId: PlayerId;
+  strokeId: StrokeId;
   tool: DrawTool;
-  color: string;
-  size: number;
+  color: HexColor;
+  size: BrushSize;
   points: DrawPoint[];
   isFinal: boolean;
 };
@@ -78,10 +89,10 @@ export type DrawEvent = {
 export type ChatMessageType = 'player' | 'system' | 'hint' | 'guess_result';
 
 export type Message = {
-  id: string;
-  roomId: string;
-  playerId: string | null;
+  id: MessageId;
+  roomId: RoomId;
+  playerId: PlayerId | null;
   type: ChatMessageType;
   text: string;
-  createdAt: string;
+  createdAt: IsoTimestamp;
 };
