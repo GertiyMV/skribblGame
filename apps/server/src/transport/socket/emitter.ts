@@ -1,7 +1,7 @@
-import type { ServerToClientEventPayloads } from '@skribbl/shared';
+import type { RoomId, ServerToClientEventPayloads } from '@skribbl/shared';
 import { serverToClientSchemas } from '@skribbl/shared';
 
-import type { GameSocket, RoomEmitterTarget, RuntimeEmitter } from '../../types/socket.js';
+import type { GameSocket, RoomEmitterTarget, RuntimeEmitter } from '../../types/types-socket.js';
 
 export const emitToSocket = <TEvent extends keyof ServerToClientEventPayloads>(
   socket: GameSocket,
@@ -23,7 +23,7 @@ export const emitToSocket = <TEvent extends keyof ServerToClientEventPayloads>(
 
 export const emitToRoom = <TEvent extends keyof ServerToClientEventPayloads>(
   roomEmitterTarget: RoomEmitterTarget,
-  roomId: string,
+  roomId: RoomId,
   event: TEvent,
   payload: ServerToClientEventPayloads[TEvent],
 ): void => {

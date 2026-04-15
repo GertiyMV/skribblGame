@@ -12,6 +12,8 @@
     "packages/*"
   ],
   "scripts": {
+    "check:dist-sync": "node ./scripts/check-dist-sync.mjs",
+    "pretest": "npm run check:dist-sync",
     "lint": "npm run lint --workspaces --if-present",
     "type-check": "npm run type-check --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

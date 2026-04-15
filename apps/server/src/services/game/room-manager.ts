@@ -1,3 +1,4 @@
+import type { PlayerId, RoomId } from '@skribbl/shared';
 import { RECONNECT_TIMEOUT_MS } from '@skribbl/shared';
 import { clearTimeout, setTimeout } from 'node:timers';
 
@@ -10,21 +11,21 @@ type SetTimeoutFn = (callback: () => void, ms: number) => TimerHandle;
 type ClearTimeoutFn = (handle: TimerHandle) => void;
 
 interface RoomEntry {
-  playerIds: Set<string>;
+  playerIds: Set<PlayerId>;
   emptyTimer: TimerHandle | null;
 }
 
 export class RoomManager {
-  private readonly rooms = new Map<string, RoomEntry>();
-  private readonly reconnectTimers = new Map<string, TimerHandle>();
-  private readonly onRoomDeleted: (roomId: string) => Promise<void>;
-  private readonly onReconnectTimeout: (roomId: string, playerId: string) => Promise<void>;
+  private readonly rooms = new Map<RoomId, RoomEntry>();
+  private readonly reconnectTimers = new Map<PlayerId, TimerHandle>();
+  private readonly onRoomDeleted: (roomId: RoomId) => Promise<void>;
+  private readonly onReconnectTimeout: (roomId: RoomId, playerId: PlayerId) => Promise<void>;
   private readonly scheduleTimer: SetTimeoutFn;
   private readonly cancelTimer: ClearTimeoutFn;
 
   constructor(
-    onRoomDeleted: (roomId: string) => Promise<void>,
-    onReconnectTimeout: (roomId: string, playerId: string) => Promise<void>,
+    onRoomDeleted: (roomId: RoomId) => Promise<void>,
+    onReconnectTimeout: (roomId: RoomId, playerId: PlayerId) => Promise<void>,
     timerFns: { setTimeout?: SetTimeoutFn; clearTimeout?: ClearTimeoutFn } = {},
   ) {
     this.onRoomDeleted = onRoomDeleted;
@@ -33,7 +34,7 @@ export class RoomManager {
     this.cancelTimer = timerFns.clearTimeout ?? clearTimeout;
   }
 
-  createRoom(): string {
+  createRoom(): RoomId {
     let code: string;
 
     do {
@@ -48,11 +49,11 @@ export class RoomManager {
     return code;
   }
 
-  hasRoom(roomId: string): boolean {
+  hasRoom(roomId: RoomId): boolean {
     return this.rooms.has(roomId);
   }
 
-  addPlayer(roomId: string, playerId: string): void {
+  addPlayer(roomId: RoomId, playerId: PlayerId): void {
     const room = this.rooms.get(roomId);
     if (!room) {
       return;
@@ -72,7 +73,7 @@ export class RoomManager {
     room.playerIds.add(playerId);
   }
 
-  removePlayer(roomId: string, playerId: string): void {
+  removePlayer(roomId: RoomId, playerId: PlayerId): void {
     const room = this.rooms.get(roomId);
     if (!room) {
       return;
@@ -95,7 +96,7 @@ export class RoomManager {
     this.reconnectTimers.set(playerId, timer);
   }
 
-  deleteRoom(roomId: string): void {
+  deleteRoom(roomId: RoomId): void {
     const room = this.rooms.get(roomId);
     if (!room) {
       return;

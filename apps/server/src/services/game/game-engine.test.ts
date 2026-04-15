@@ -5,13 +5,14 @@ import { setTimeout } from 'node:timers';
 import { GamePhase, RoundPhase } from '@skribbl/shared';
 import type { RedisClientType } from 'redis';
 
-import { getRoomState, type RoomState } from '../../repositories/room-repository.js';
+import { getRoomState } from '../../repositories/room-repository.js';
+import type { RoomState } from '../../types/types-game.js';
 import type {
   GameNamespace,
   GameSocket,
   RoomEmitterTarget,
   SocketData,
-} from '../../types/socket.js';
+} from '../../types/types-socket.js';
 import { GameEngine } from './game-engine.js';
 
 const flushAsync = async (): Promise<void> => {

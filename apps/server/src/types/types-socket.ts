@@ -1,14 +1,18 @@
 import type {
   ClientToServerEvents,
+  PlayerId,
+  RoomId,
   ServerToClientEventPayloads,
   ServerToClientEvents,
 } from '@skribbl/shared';
 import type { Namespace, Server, Socket } from 'socket.io';
 
+import type { SessionId } from './types-session.js';
+
 export type SocketData = {
-  playerId?: string;
-  roomId?: string;
-  sessionId?: string;
+  playerId?: PlayerId;
+  roomId?: RoomId;
+  sessionId?: SessionId;
 };
 
 export type TypedIoServer = Server<
@@ -42,5 +46,5 @@ export type RuntimeEmitter = {
 };
 
 export type RoomEmitterTarget = {
-  to: (roomId: string) => RuntimeEmitter;
+  to: (roomId: RoomId) => RuntimeEmitter;
 };

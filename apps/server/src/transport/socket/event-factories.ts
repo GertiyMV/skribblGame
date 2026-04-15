@@ -1,12 +1,21 @@
 import { randomUUID } from 'node:crypto';
 
-import type { Player, ServerToClientEventPayloads } from '@skribbl/shared';
+import type {
+  IsoTimestamp,
+  MessageId,
+  PlayerId,
+  Player,
+  RoomId,
+  Score,
+  ServerToClientEventPayloads,
+  Word,
+} from '@skribbl/shared';
 
 import { systemPlayerId } from '../../constants/socket.js';
-import type { RoomState } from '../../repositories/room-repository.js';
-import type { GuessResultErrorCode } from '../../types/socket.js';
+import type { RoomState } from '../../types/types-game.js';
+import type { GuessResultErrorCode } from '../../types/types-socket.js';
 
-const nowIso = (): string => new Date().toISOString();
+const nowIso = (): IsoTimestamp => new Date().toISOString();
 
 const toJoinedPlayer = (
   player: Player,
@@ -20,7 +29,7 @@ const toJoinedPlayer = (
 
 export const createPlayerJoinedEvent = (
   state: RoomState,
-  playerId: string,
+  playerId: PlayerId,
 ): ServerToClientEventPayloads['player_joined'] => {
   const player = state.players.find((entry) => entry.id === playerId);
 
@@ -50,8 +59,8 @@ export const createScoreUpdateEvent = (
 });
 
 export const createSessionReadyEvent = (params: {
-  roomId: string;
-  playerId: string;
+  roomId: RoomId;
+  playerId: PlayerId;
   reconnectToken: string;
   state: RoomState;
 }): ServerToClientEventPayloads['session_ready'] => ({
@@ -65,7 +74,7 @@ export const createSessionReadyEvent = (params: {
 
 export const createPlayerLeftEvent = (params: {
   state: RoomState;
-  playerId: string;
+  playerId: PlayerId;
   reason: ServerToClientEventPayloads['player_left']['reason'];
 }): ServerToClientEventPayloads['player_left'] => ({
   eventId: randomUUID(),
@@ -77,7 +86,7 @@ export const createPlayerLeftEvent = (params: {
 });
 
 export const createJoinErrorEvent = (params: {
-  roomId: string;
+  roomId: RoomId;
   code: GuessResultErrorCode;
   message: string;
 }): ServerToClientEventPayloads['guess_result'] => ({
@@ -94,8 +103,8 @@ export const createJoinErrorEvent = (params: {
 });
 
 export const createRateLimitEvent = (params: {
-  roomId: string;
-  playerId: string;
+  roomId: RoomId;
+  playerId: PlayerId;
 }): ServerToClientEventPayloads['guess_result'] => ({
   eventId: randomUUID(),
   ts: nowIso(),
@@ -111,7 +120,7 @@ export const createRateLimitEvent = (params: {
 
 export const createRoundStartEvent = (
   state: RoomState,
-  options: { wordOptions?: string[] } = {},
+  options: { wordOptions?: Word[] } = {},
 ): ServerToClientEventPayloads['round_start'] => {
   const baseEvent = {
     eventId: randomUUID(),
@@ -145,7 +154,7 @@ export const createRoundStartEvent = (
 export const createRoundEndEvent = (
   state: RoomState,
   reason: ServerToClientEventPayloads['round_end']['reason'],
-  nextLeaderPlayerId: string,
+  nextLeaderPlayerId: PlayerId,
 ): ServerToClientEventPayloads['round_end'] => ({
   eventId: randomUUID(),
   ts: nowIso(),
@@ -168,7 +177,7 @@ export const createHintUpdateEvent = (
 
 export const createGameOverEvent = (
   state: RoomState,
-  winners: string[],
+  winners: PlayerId[],
 ): ServerToClientEventPayloads['game_over'] => ({
   eventId: randomUUID(),
   ts: nowIso(),
@@ -181,11 +190,11 @@ export const createGameOverEvent = (
 });
 
 export const createGuessResultEvent = (params: {
-  roomId: string;
-  playerId: string;
-  messageId: string;
+  roomId: RoomId;
+  playerId: PlayerId;
+  messageId: MessageId;
   result: 'correct' | 'incorrect' | 'near_miss' | 'blocked';
-  awardedScore?: number;
+  awardedScore?: Score;
   position?: number;
 }): ServerToClientEventPayloads['guess_result'] => ({
   eventId: randomUUID(),
@@ -200,9 +209,9 @@ export const createGuessResultEvent = (params: {
 });
 
 export const createWordRevealEvent = (params: {
-  roomId: string;
-  word: string;
-  leaderPlayerId: string;
+  roomId: RoomId;
+  word: Word;
+  leaderPlayerId: PlayerId;
 }): ServerToClientEventPayloads['word_reveal'] => ({
   eventId: randomUUID(),
   ts: nowIso(),

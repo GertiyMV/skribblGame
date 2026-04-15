@@ -5,12 +5,8 @@ import { Server } from 'socket.io';
 
 import { gameNamespace } from './constants/socket.js';
 import { env } from './config/env.js';
-import {
-  deleteRoomState,
-  getRoomState,
-  saveRoomState,
-  type RoomState,
-} from './repositories/room-repository.js';
+import { deleteRoomState, getRoomState, saveRoomState } from './repositories/room-repository.js';
+import type { RoomState } from './types/types-game.js';
 import { RoomManager } from './services/game/room-manager.js';
 import { GameEngine } from './services/game/game-engine.js';
 import { connectRedis } from './services/redis/client.js';
@@ -22,7 +18,7 @@ import type {
   RoomEmitterTarget,
   RuntimeEmitter,
   TypedIoServer,
-} from './types/socket.js';
+} from './types/types-socket.js';
 
 const createServer = async (): Promise<void> => {
   const redis = await connectRedis();
