@@ -26,6 +26,7 @@ import {
   createScoreUpdateEvent,
   createWordRevealEvent,
 } from '../../transport/socket/event-factories.js';
+import { WordService } from '../word-service/word-service.js';
 
 type TimerHandle = ReturnType<typeof setTimeout>;
 type SetTimeoutFn = (callback: () => void, ms: number) => TimerHandle;
@@ -37,75 +38,6 @@ interface RoomTimerState {
   roundEndTimer: TimerHandle | null;
   hintTimers: TimerHandle[];
 }
-
-const WORD_BANK = {
-  easy: [
-    'кот',
-    'дом',
-    'лес',
-    'река',
-    'рыба',
-    'небо',
-    'звезда',
-    'цветок',
-    'книга',
-    'стол',
-    'стул',
-    'мяч',
-    'солнце',
-    'луна',
-    'море',
-    'гора',
-    'снег',
-    'дождь',
-    'хлеб',
-    'молоко',
-  ],
-  medium: [
-    'велосипед',
-    'самолёт',
-    'корабль',
-    'автобус',
-    'поезд',
-    'радуга',
-    'облако',
-    'фонтан',
-    'замок',
-    'маяк',
-    'мост',
-    'башня',
-    'корона',
-    'зонт',
-    'очки',
-    'гитара',
-    'пианино',
-    'ракета',
-    'планета',
-    'робот',
-  ],
-  hard: [
-    'библиотека',
-    'телескоп',
-    'микроскоп',
-    'акробат',
-    'вулкан',
-    'лабиринт',
-    'пирамида',
-    'водопад',
-    'карусель',
-    'шахматы',
-    'архитектор',
-    'парашют',
-    'эскалатор',
-    'трамплин',
-    'аквариум',
-    'метрополитен',
-    'обсерватория',
-    'бумеранг',
-    'экскаватор',
-    'скалолаз',
-  ],
-} as const;
 
 const makeMask = (word: string): string =>
   Array.from(word)
@@ -207,15 +139,6 @@ const getWinners = (state: RoomState): PlayerId[] => {
 const pickRandom = <T>(array: readonly T[]): T | undefined =>
   array[Math.floor(Math.random() * array.length)];
 
-const buildWordOptions = (count: number): Word[] => {
-  const targetCount = Math.max(1, Math.floor(count));
-  const allWords = [...WORD_BANK.easy, ...WORD_BANK.medium, ...WORD_BANK.hard];
-  const uniqueWords = [...new Set(allWords)];
-  const shuffled = [...uniqueWords].sort(() => Math.random() - 0.5);
-
-  return shuffled.slice(0, Math.min(targetCount, shuffled.length));
-};
-
 export class GameEngine {
   private readonly roomTimers = new Map<RoomId, RoomTimerState>();
   private readonly redis: RedisClientType;
@@ -223,6 +146,7 @@ export class GameEngine {
   private readonly scheduleTimer: SetTimeoutFn;
   private readonly cancelTimer: ClearTimeoutFn;
   private readonly namespace?: GameNamespace;
+  private readonly wordService: WordService;
 
   constructor(
     redis: RedisClientType,
@@ -231,6 +155,7 @@ export class GameEngine {
       setTimeout?: SetTimeoutFn;
       clearTimeout?: ClearTimeoutFn;
       namespace?: GameNamespace;
+      wordService?: WordService;
     } = {},
   ) {
     this.redis = redis;
@@ -238,6 +163,7 @@ export class GameEngine {
     this.scheduleTimer = timerFns.setTimeout ?? setTimeout;
     this.cancelTimer = timerFns.clearTimeout ?? clearTimeout;
     this.namespace = timerFns.namespace;
+    this.wordService = timerFns.wordService ?? new WordService();
   }
 
   private async emitRoundStart(state: RoomState): Promise<void> {
@@ -341,7 +267,7 @@ export class GameEngine {
       roundPhase: RoundPhase.WordSelection,
       miniRoundNumber: state.miniRoundNumber === 0 ? 1 : state.miniRoundNumber,
       roundEndAt: selectionDeadline,
-      wordOptions: buildWordOptions(state.settings.wordChoicesCount),
+      wordOptions: this.wordService.getWordOptions(state.settings.wordChoicesCount),
       wordMask: '',
       wordLength: 0,
       hintsUsed: 0,
@@ -603,7 +529,7 @@ export class GameEngine {
       return;
     }
 
-    const autoSelectedWord = pickRandom(state.wordOptions) ?? pickRandom(WORD_BANK.easy) ?? 'кот';
+    const autoSelectedWord = pickRandom(state.wordOptions) ?? this.wordService.pickFallbackWord();
     await this.transitionToDrawing(state, autoSelectedWord);
   }
 
@@ -947,7 +873,7 @@ export class GameEngine {
       roundPhase: RoundPhase.WordSelection,
       miniRoundNumber: state.miniRoundNumber + 1,
       roundEndAt: selectionDeadline,
-      wordOptions: buildWordOptions(state.settings.wordChoicesCount),
+      wordOptions: this.wordService.getWordOptions(state.settings.wordChoicesCount),
       wordMask: '',
       wordLength: 0,
       hintsUsed: 0,
