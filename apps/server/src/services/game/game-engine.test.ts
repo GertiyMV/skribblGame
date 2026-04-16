@@ -13,6 +13,7 @@ import type {
   RoomEmitterTarget,
   SocketData,
 } from '../../types/types-socket.js';
+import type { WordService } from '../word-service/word-service.js';
 import { GameEngine } from './game-engine.js';
 
 const flushAsync = async (): Promise<void> => {
@@ -333,7 +334,7 @@ describe('GameEngine', () => {
       },
       pickFallbackWord: (_difficulty: 'medium' | 'hard') => 'трансформатор',
       getWordCount: () => 500,
-    } as unknown as ConstructorParameters<typeof GameEngine>[2]['wordService'];
+    } as unknown as WordService;
     const engine = new GameEngine(redis, roomEmitterTarget, {
       setTimeout: timers.fakeSetTimeout,
       clearTimeout: timers.fakeClearTimeout,
