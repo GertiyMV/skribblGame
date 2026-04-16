@@ -48,6 +48,7 @@ const BASE_ROOM_STATE: RoomState = {
     wordChoicesCount: 3,
     hintsCount: 3,
     language: 'ru',
+    wordDifficulty: 'medium',
     useCustomWordsOnly: false,
   },
   roundParticipantsCount: 1,

@@ -13,6 +13,7 @@ import type {
   RoomEmitterTarget,
   SocketData,
 } from '../../types/types-socket.js';
+import type { WordService } from '../word-service/word-service.js';
 import { GameEngine } from './game-engine.js';
 
 const flushAsync = async (): Promise<void> => {
@@ -143,6 +144,7 @@ const baseState = (overrides: Partial<RoomState> = {}): RoomState => ({
     wordChoicesCount: 3,
     hintsCount: 0,
     language: 'ru',
+    wordDifficulty: 'medium',
     useCustomWordsOnly: false,
   },
   roundParticipantsCount: 2,
@@ -314,6 +316,40 @@ describe('GameEngine', () => {
     assert.ok(savedState.wordOptions.every((w) => typeof w === 'string' && w.length > 0));
   });
 
+  it('wordOptions после start_game запрашиваются только для выбранной сложности', async () => {
+    const state = baseState({
+      settings: {
+        ...baseState().settings,
+        wordDifficulty: 'hard',
+      },
+    });
+    const { redis } = createInMemoryRedis(state);
+    const { roomEmitterTarget } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const calls: Array<{ count: number; difficulty: 'medium' | 'hard' }> = [];
+    const stubWordService = {
+      getWordOptions: (count: number, difficulty: 'medium' | 'hard') => {
+        calls.push({ count, difficulty });
+        return ['трансформатор', 'метеорология', 'архипелаг'].slice(0, count);
+      },
+      pickFallbackWord: (_difficulty: 'medium' | 'hard') => 'трансформатор',
+      getWordCount: () => 500,
+    } as unknown as WordService;
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+      wordService: stubWordService,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+
+    const savedState = await getRoomState(redis, state.roomId);
+    assert.ok(savedState);
+    assert.deepEqual(calls, [{ count: 3, difficulty: 'hard' }]);
+    assert.deepEqual(savedState.wordOptions, ['трансформатор', 'метеорология', 'архипелаг']);
+  });
+
   it('таймаут выбора слова автоматически выбирает слово из wordOptions', async () => {
     // Полный цикл: start_game -> подмена wordOptions -> timeout word_selection.
     const lobbyState = baseState({ totalMiniRounds: 1, miniRoundNumber: 0 });
@@ -431,6 +467,7 @@ describe('GameEngine', () => {
         wordChoicesCount: 3,
         hintsCount: 1,
         language: 'ru',
+        wordDifficulty: 'medium',
         useCustomWordsOnly: false,
       },
     });
@@ -497,6 +534,7 @@ describe('GameEngine', () => {
         wordChoicesCount: 3,
         hintsCount: 2,
         language: 'ru',
+        wordDifficulty: 'medium',
         useCustomWordsOnly: false,
       },
     });
@@ -558,6 +596,7 @@ describe('GameEngine', () => {
         wordChoicesCount: 3,
         hintsCount: 1,
         language: 'ru',
+        wordDifficulty: 'medium',
         useCustomWordsOnly: false,
       },
     });
@@ -613,6 +652,7 @@ describe('GameEngine', () => {
         wordChoicesCount: 3,
         hintsCount: 2,
         language: 'ru',
+        wordDifficulty: 'medium',
         useCustomWordsOnly: false,
       },
     });
@@ -742,6 +782,7 @@ describe('GameEngine', () => {
         wordChoicesCount: 3,
         hintsCount: 0,
         language: 'ru',
+        wordDifficulty: 'medium',
         useCustomWordsOnly: false,
       },
     });

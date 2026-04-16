@@ -1,10 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { type Word, wordSchema } from '@skribbl/shared';
+import { type Word, type WordDifficulty, wordSchema } from '@skribbl/shared';
 import { z } from 'zod';
-
-type WordDifficulty = 'easy' | 'medium' | 'hard';
 
 type WordDictionary = Record<WordDifficulty, Word[]>;
 
@@ -13,12 +11,11 @@ type WordServiceOptions = {
   dictionaryData?: unknown;
 };
 
-const DIFFICULTIES: WordDifficulty[] = ['easy', 'medium', 'hard'];
-const MIN_TOTAL_WORDS = 200;
+const DIFFICULTIES: WordDifficulty[] = ['medium', 'hard'];
+const MIN_WORDS_PER_DIFFICULTY = 250;
 const DEFAULT_FALLBACK_WORD: Word = 'кот';
 
 const dictionarySchema = z.object({
-  easy: z.array(wordSchema).min(1),
   medium: z.array(wordSchema).min(1),
   hard: z.array(wordSchema).min(1),
 });
@@ -90,12 +87,16 @@ const readDictionaryPayload = (dictionaryPath: string): unknown => {
 const validateDictionaryQuality = (dictionary: WordDictionary): WordDictionary => {
   const normalizedWords = new Map<string, { difficulty: WordDifficulty; original: Word }>();
   const allNormalizedWords: string[] = [];
-  let totalWordCount = 0;
 
   for (const difficulty of DIFFICULTIES) {
+    if (dictionary[difficulty].length < MIN_WORDS_PER_DIFFICULTY) {
+      throw new Error(
+        `Dictionary difficulty "${difficulty}" must contain at least ${MIN_WORDS_PER_DIFFICULTY} words, received ${dictionary[difficulty].length}.`,
+      );
+    }
+
     for (const originalWord of dictionary[difficulty]) {
       const normalizedWord = normalizeWord(originalWord);
-      totalWordCount += 1;
 
       const duplicatedWord = normalizedWords.get(normalizedWord);
       if (duplicatedWord) {
@@ -124,12 +125,6 @@ const validateDictionaryQuality = (dictionary: WordDictionary): WordDictionary =
     }
   }
 
-  if (totalWordCount < MIN_TOTAL_WORDS) {
-    throw new Error(
-      `Dictionary must contain at least ${MIN_TOTAL_WORDS} words, received ${totalWordCount}.`,
-    );
-  }
-
   return dictionary;
 };
 
@@ -138,28 +133,33 @@ const parseDictionary = (payload: unknown): WordDictionary =>
 
 export class WordService {
   private readonly dictionary: WordDictionary;
-  private readonly allWords: Word[];
-  private readonly fallbackWord: Word;
+  private readonly fallbackWords: Record<WordDifficulty, Word>;
 
   constructor(options: WordServiceOptions = {}) {
     const dictionaryPath =
       options.dictionaryPath ?? path.join(import.meta.dirname, 'dictionaries', 'ru.json');
     const payload = options.dictionaryData ?? readDictionaryPayload(dictionaryPath);
     this.dictionary = parseDictionary(payload);
-    this.allWords = DIFFICULTIES.flatMap((difficulty) => this.dictionary[difficulty]);
-    this.fallbackWord = this.dictionary.easy[0] ?? DEFAULT_FALLBACK_WORD;
+    this.fallbackWords = {
+      medium: this.dictionary.medium[0] ?? DEFAULT_FALLBACK_WORD,
+      hard: this.dictionary.hard[0] ?? this.dictionary.medium[0] ?? DEFAULT_FALLBACK_WORD,
+    };
   }
 
-  getWordOptions(count: number): Word[] {
+  getWordOptions(count: number, difficulty: WordDifficulty): Word[] {
     const targetCount = Math.max(1, Math.floor(count));
-    return shuffle(this.allWords).slice(0, Math.min(targetCount, this.allWords.length));
+    const words = this.dictionary[difficulty];
+    return shuffle(words).slice(0, Math.min(targetCount, words.length));
   }
 
-  pickFallbackWord(): Word {
-    return this.fallbackWord;
+  pickFallbackWord(difficulty: WordDifficulty): Word {
+    return this.fallbackWords[difficulty];
   }
 
-  getWordCount(): number {
-    return this.allWords.length;
+  getWordCount(difficulty?: WordDifficulty): number {
+    if (difficulty) {
+      return this.dictionary[difficulty].length;
+    }
+    return DIFFICULTIES.reduce((sum, level) => sum + this.dictionary[level].length, 0);
   }
 }

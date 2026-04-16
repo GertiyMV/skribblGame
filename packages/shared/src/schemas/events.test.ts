@@ -8,11 +8,13 @@ describe('clientToServerSchemas.create_room', () => {
   it('обрезает nickname и валидирует payload', () => {
     const result = clientToServerSchemas.create_room.safeParse({
       nickname: '  Misha  ',
-      settingsOverride: { roundTimeSec: 80 },
+      settingsOverride: { roundTimeSec: 80, wordChoicesCount: 5, wordDifficulty: 'hard' },
     });
 
     assert.equal(result.success, true);
     assert.equal(result.data?.nickname, 'Misha');
+    assert.equal(result.data?.settingsOverride?.wordChoicesCount, 5);
+    assert.equal(result.data?.settingsOverride?.wordDifficulty, 'hard');
   });
 });
 
