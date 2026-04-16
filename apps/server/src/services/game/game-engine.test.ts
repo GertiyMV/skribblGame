@@ -112,6 +112,7 @@ const baseState = (overrides: Partial<RoomState> = {}): RoomState => ({
   leaderPlayerId: 'owner-id',
   roundEndAt: '2026-04-08T12:00:00.000Z',
   wordOptions: [],
+  usedWords: [],
   word: '',
   wordMask: '',
   wordLength: 0,
@@ -326,10 +327,18 @@ describe('GameEngine', () => {
     const { redis } = createInMemoryRedis(state);
     const { roomEmitterTarget } = makeRoomEmitter();
     const timers = makeFakeTimers();
-    const calls: Array<{ count: number; difficulty: 'medium' | 'hard' }> = [];
+    const calls: Array<{
+      count: number;
+      difficulty: 'medium' | 'hard';
+      excludedWords: string[];
+    }> = [];
     const stubWordService = {
-      getWordOptions: (count: number, difficulty: 'medium' | 'hard') => {
-        calls.push({ count, difficulty });
+      getWordOptions: (
+        count: number,
+        difficulty: 'medium' | 'hard',
+        excludedWords: readonly string[] = [],
+      ) => {
+        calls.push({ count, difficulty, excludedWords: [...excludedWords] });
         return ['трансформатор', 'метеорология', 'архипелаг'].slice(0, count);
       },
       pickFallbackWord: (_difficulty: 'medium' | 'hard') => 'трансформатор',
@@ -346,8 +355,59 @@ describe('GameEngine', () => {
 
     const savedState = await getRoomState(redis, state.roomId);
     assert.ok(savedState);
-    assert.deepEqual(calls, [{ count: 3, difficulty: 'hard' }]);
+    assert.deepEqual(calls, [{ count: 3, difficulty: 'hard', excludedWords: [] }]);
     assert.deepEqual(savedState.wordOptions, ['трансформатор', 'метеорология', 'архипелаг']);
+  });
+
+  it('в новом mini-round не предлагает уже выбранные в прошлых раундах слова', async () => {
+    const state = baseState({ totalMiniRounds: 2, miniRoundNumber: 0 });
+    const { redis } = createInMemoryRedis(state);
+    const { roomEmitterTarget } = makeRoomEmitter();
+    const timers = makeFakeTimers();
+    const calls: string[][] = [];
+
+    const stubWordService = {
+      getWordOptions: (
+        count: number,
+        _difficulty: 'medium' | 'hard',
+        excludedWords: readonly string[] = [],
+      ) => {
+        calls.push([...excludedWords]);
+        const initialOptions = ['кот', 'лес', 'дом'];
+        const nextOptions = ['река', 'море', 'гора'];
+        return (excludedWords.includes('кот') ? nextOptions : initialOptions).slice(0, count);
+      },
+      pickFallbackWord: (_difficulty: 'medium' | 'hard') => 'кот',
+      getWordCount: () => 500,
+    } as unknown as WordService;
+
+    const engine = new GameEngine(redis, roomEmitterTarget, {
+      setTimeout: timers.fakeSetTimeout,
+      clearTimeout: timers.fakeClearTimeout,
+      wordService: stubWordService,
+    });
+    const { socket } = makeSocket({ roomId: state.roomId, playerId: 'owner-id' });
+
+    await engine.handleStartGame(socket, { roomId: state.roomId });
+    await engine.handleChooseWord(socket, { roomId: state.roomId, word: 'кот' });
+
+    let drawingState = await getRoomState(redis, state.roomId);
+    assert.ok(drawingState);
+    assert.deepEqual(drawingState.usedWords, ['кот']);
+
+    timers.tickFirst(); // drawing timeout -> round_end
+    await flushAsync();
+    await flushAsync();
+    timers.tickFirst(); // round_end timeout -> next word_selection
+    await flushAsync();
+    await flushAsync();
+
+    const nextState = await getRoomState(redis, state.roomId);
+    assert.ok(nextState);
+    assert.equal(nextState.roundPhase, RoundPhase.WordSelection);
+    assert.deepEqual(nextState.usedWords, ['кот']);
+    assert.deepEqual(nextState.wordOptions, ['река', 'море', 'гора']);
+    assert.deepEqual(calls, [[], ['кот']]);
   });
 
   it('таймаут выбора слова автоматически выбирает слово из wordOptions', async () => {

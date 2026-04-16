@@ -146,10 +146,20 @@ export class WordService {
     };
   }
 
-  getWordOptions(count: number, difficulty: WordDifficulty): Word[] {
+  getWordOptions(
+    count: number,
+    difficulty: WordDifficulty,
+    excludedWords: readonly Word[] = [],
+  ): Word[] {
     const targetCount = Math.max(1, Math.floor(count));
     const words = this.dictionary[difficulty];
-    return shuffle(words).slice(0, Math.min(targetCount, words.length));
+    if (excludedWords.length === 0) {
+      return shuffle(words).slice(0, Math.min(targetCount, words.length));
+    }
+
+    const excludedWordSet = new Set(excludedWords.map((word) => normalizeWord(word)));
+    const availableWords = words.filter((word) => !excludedWordSet.has(normalizeWord(word)));
+    return shuffle(availableWords).slice(0, Math.min(targetCount, availableWords.length));
   }
 
   pickFallbackWord(difficulty: WordDifficulty): Word {

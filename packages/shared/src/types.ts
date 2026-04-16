@@ -61,6 +61,7 @@ export type GameState = {
   leaderPlayerId: PlayerId;
   roundEndAt: IsoTimestamp;
   wordOptions: Word[];
+  usedWords: Word[];
   wordMask: string;
   wordLength: number;
   hintsUsed: number;

@@ -36,6 +36,18 @@ describe('WordService', () => {
     assert.ok(options.every((word) => hardOptions.has(word)));
   });
 
+  it('исключает уже выбранные слова из новых вариантов', () => {
+    const service = new WordService();
+    const allMediumWords = service.getWordOptions(service.getWordCount('medium'), 'medium');
+    const excludedWords = allMediumWords.slice(0, 20);
+    const options = service.getWordOptions(50, 'medium', excludedWords);
+
+    assert.equal(
+      options.some((word) => excludedWords.includes(word)),
+      false,
+    );
+  });
+
   it('бросает ошибку при дубликатах после нормализации', () => {
     const mediumWords = makeWords('книга', 248);
     const hardWords = makeWords('лампа', 250);
