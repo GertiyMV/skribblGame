@@ -119,6 +119,7 @@ export const gameStateSchema = z.object({
   leaderPlayerId: playerIdSchema,
   roundEndAt: timestampSchema,
   wordOptions: z.array(wordSchema),
+  usedWords: z.array(wordSchema),
   wordMask: z.string(),
   wordLength: z.number().int().min(0),
   hintsUsed: z.number().int().min(0),

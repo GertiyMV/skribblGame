@@ -64,6 +64,7 @@ export const createInitialRoomState = (params: {
     leaderPlayerId: params.ownerPlayerId,
     roundEndAt: nowIso,
     wordOptions: [],
+    usedWords: [],
     word: '',
     wordMask: '',
     wordLength: 0,

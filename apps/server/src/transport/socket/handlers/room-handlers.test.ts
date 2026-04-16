@@ -25,6 +25,7 @@ const BASE_ROOM_STATE: RoomState = {
   leaderPlayerId: 'owner-id',
   roundEndAt: '2026-04-08T12:00:00.000Z',
   wordOptions: [],
+  usedWords: [],
   word: '',
   wordMask: '',
   wordLength: 0,

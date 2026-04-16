@@ -270,7 +270,9 @@ export class GameEngine {
       wordOptions: this.wordService.getWordOptions(
         state.settings.wordChoicesCount,
         state.settings.wordDifficulty,
+        [],
       ),
+      usedWords: [],
       wordMask: '',
       wordLength: 0,
       hintsUsed: 0,
@@ -552,6 +554,7 @@ export class GameEngine {
       roundPhase: RoundPhase.Drawing,
       roundEndAt,
       word: chosenWord,
+      usedWords: [...(state.usedWords ?? []), chosenWord],
       wordOptions: [],
       wordMask: makeMask(chosenWord),
       wordLength: Array.from(chosenWord).length,
@@ -881,6 +884,7 @@ export class GameEngine {
       wordOptions: this.wordService.getWordOptions(
         state.settings.wordChoicesCount,
         state.settings.wordDifficulty,
+        state.usedWords ?? [],
       ),
       wordMask: '',
       wordLength: 0,
