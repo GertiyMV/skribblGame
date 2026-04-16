@@ -36,9 +36,10 @@ export const createInitialRoomState = (params: {
       (params.settingsOverride?.roundTimeSec as RoomSettings['roundTimeSec'] | undefined) ??
       DEFAULT_ROUND_TIME_SEC,
     roundsCount: params.settingsOverride?.roundsCount ?? DEFAULT_ROUNDS_COUNT,
-    wordChoicesCount: DEFAULT_WORD_CHOICES,
+    wordChoicesCount: params.settingsOverride?.wordChoicesCount ?? DEFAULT_WORD_CHOICES,
     hintsCount: params.settingsOverride?.hintsCount ?? DEFAULT_HINTS_COUNT,
     language: 'ru',
+    wordDifficulty: params.settingsOverride?.wordDifficulty ?? 'medium',
     useCustomWordsOnly: false,
   };
 

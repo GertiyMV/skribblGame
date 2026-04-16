@@ -267,7 +267,10 @@ export class GameEngine {
       roundPhase: RoundPhase.WordSelection,
       miniRoundNumber: state.miniRoundNumber === 0 ? 1 : state.miniRoundNumber,
       roundEndAt: selectionDeadline,
-      wordOptions: this.wordService.getWordOptions(state.settings.wordChoicesCount),
+      wordOptions: this.wordService.getWordOptions(
+        state.settings.wordChoicesCount,
+        state.settings.wordDifficulty,
+      ),
       wordMask: '',
       wordLength: 0,
       hintsUsed: 0,
@@ -529,7 +532,9 @@ export class GameEngine {
       return;
     }
 
-    const autoSelectedWord = pickRandom(state.wordOptions) ?? this.wordService.pickFallbackWord();
+    const autoSelectedWord =
+      pickRandom(state.wordOptions) ??
+      this.wordService.pickFallbackWord(state.settings.wordDifficulty);
     await this.transitionToDrawing(state, autoSelectedWord);
   }
 
@@ -873,7 +878,10 @@ export class GameEngine {
       roundPhase: RoundPhase.WordSelection,
       miniRoundNumber: state.miniRoundNumber + 1,
       roundEndAt: selectionDeadline,
-      wordOptions: this.wordService.getWordOptions(state.settings.wordChoicesCount),
+      wordOptions: this.wordService.getWordOptions(
+        state.settings.wordChoicesCount,
+        state.settings.wordDifficulty,
+      ),
       wordMask: '',
       wordLength: 0,
       hintsUsed: 0,

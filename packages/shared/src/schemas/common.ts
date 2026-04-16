@@ -13,6 +13,8 @@ import {
   ROUNDS_COUNT_MAX,
   ROUNDS_COUNT_MIN,
   ROUND_TIME_OPTIONS_SEC,
+  WORD_CHOICES_MAX,
+  WORD_CHOICES_MIN,
 } from '../constants.js';
 import { GamePhase, RoundPhase } from '../types.js';
 
@@ -72,7 +74,9 @@ export const roomSettingsOverrideSchema = z.object({
   maxPlayers: z.number().int().min(ROOM_MAX_PLAYERS_MIN).max(ROOM_MAX_PLAYERS_MAX).optional(),
   roundsCount: z.number().int().min(ROUNDS_COUNT_MIN).max(ROUNDS_COUNT_MAX).optional(),
   roundTimeSec: roundTimeSecSchema.optional(),
+  wordChoicesCount: z.number().int().min(WORD_CHOICES_MIN).max(WORD_CHOICES_MAX).optional(),
   hintsCount: z.number().int().min(HINTS_COUNT_MIN).max(HINTS_COUNT_MAX).optional(),
+  wordDifficulty: z.enum(['medium', 'hard']).optional(),
 });
 
 export const scoreEntrySchema = z.object({
@@ -98,9 +102,10 @@ export const roomSettingsSchema = z.object({
   maxPlayers: z.number().int().min(ROOM_MAX_PLAYERS_MIN).max(ROOM_MAX_PLAYERS_MAX),
   roundTimeSec: roundTimeSecSchema,
   roundsCount: z.number().int().min(ROUNDS_COUNT_MIN).max(ROUNDS_COUNT_MAX),
-  wordChoicesCount: z.number().int().min(1),
+  wordChoicesCount: z.number().int().min(WORD_CHOICES_MIN).max(WORD_CHOICES_MAX),
   hintsCount: z.number().int().min(HINTS_COUNT_MIN).max(HINTS_COUNT_MAX),
   language: z.literal('ru'),
+  wordDifficulty: z.enum(['medium', 'hard']),
   customWords: z.array(z.string().trim().min(1)).optional(),
   useCustomWordsOnly: z.boolean(),
 });

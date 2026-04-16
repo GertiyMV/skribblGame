@@ -16,6 +16,7 @@ export type BrushSize = number;
 export type ConnectionStatus = 'connected' | 'disconnected';
 export type PlayerRole = 'guessing' | 'drawing' | 'spectator';
 export type RoundTimeSec = (typeof ROUND_TIME_OPTIONS_SEC)[number];
+export type WordDifficulty = 'medium' | 'hard';
 
 export type Player = {
   id: PlayerId;
@@ -34,6 +35,7 @@ export type RoomSettings = {
   wordChoicesCount: number;
   hintsCount: number;
   language: 'ru';
+  wordDifficulty: WordDifficulty;
   customWords?: string[];
   useCustomWordsOnly: boolean;
 };
