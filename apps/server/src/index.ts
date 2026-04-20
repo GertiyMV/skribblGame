@@ -10,6 +10,7 @@ import type { RoomState } from './types/types-game.js';
 import { RoomManager } from './services/game/room-manager.js';
 import { GameEngine } from './services/game/game-engine.js';
 import { connectRedis } from './services/redis/client.js';
+import { createHttpHandler } from './transport/http/create-http-handler.js';
 import { emitToRoom } from './transport/socket/emitter.js';
 import { createScoreUpdateEvent } from './transport/socket/event-factories.js';
 import { registerGameHandlers } from './transport/socket/register-game-handlers.js';
@@ -23,30 +24,14 @@ import type {
 const createServer = async (): Promise<void> => {
   const redis = await connectRedis();
 
-  const httpServer = http.createServer((request, response) => {
-    if (request.url === '/health') {
-      response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({ status: 'ok' }));
-      return;
-    }
-
-    response.writeHead(404);
-    response.end();
-  });
-
-  const io: TypedIoServer = new Server(httpServer, {
-    cors: {
-      origin: env.CLIENT_ORIGIN,
-      methods: ['GET', 'POST'],
+  const emitterRef: { current: RoomEmitterTarget | null } = { current: null };
+  const lazyEmitter: RoomEmitterTarget = {
+    to: (roomId) => {
+      if (!emitterRef.current) {
+        throw new Error('Socket.IO namespace is not ready yet');
+      }
+      return emitterRef.current.to(roomId);
     },
-    maxHttpBufferSize: WS_MAX_PAYLOAD_BYTES,
-    pingInterval: 10_000,
-    pingTimeout: 20_000,
-  });
-
-  const namespace: GameNamespace = io.of(gameNamespace);
-  const roomEmitterTarget: RoomEmitterTarget = {
-    to: (roomId) => namespace.to(roomId) as unknown as RuntimeEmitter,
   };
 
   const roomManager = new RoomManager(
@@ -64,13 +49,38 @@ const createServer = async (): Promise<void> => {
       };
 
       await saveRoomState(redis, updatedState);
-      emitToRoom(roomEmitterTarget, roomId, 'score_update', createScoreUpdateEvent(updatedState));
+      emitToRoom(lazyEmitter, roomId, 'score_update', createScoreUpdateEvent(updatedState));
     },
   );
 
-  const gameEngine = new GameEngine(redis, roomEmitterTarget, { namespace });
+  const httpServer = http.createServer(
+    createHttpHandler({ redis, roomManager, clientOrigin: env.CLIENT_ORIGIN }),
+  );
 
-  registerGameHandlers({ io: namespace, roomEmitterTarget, redis, roomManager, gameEngine });
+  const io: TypedIoServer = new Server(httpServer, {
+    cors: {
+      origin: env.CLIENT_ORIGIN,
+      methods: ['GET', 'POST'],
+    },
+    maxHttpBufferSize: WS_MAX_PAYLOAD_BYTES,
+    pingInterval: 10_000,
+    pingTimeout: 20_000,
+  });
+
+  const namespace: GameNamespace = io.of(gameNamespace);
+  emitterRef.current = {
+    to: (roomId) => namespace.to(roomId) as unknown as RuntimeEmitter,
+  };
+
+  const gameEngine = new GameEngine(redis, lazyEmitter, { namespace });
+
+  registerGameHandlers({
+    io: namespace,
+    roomEmitterTarget: lazyEmitter,
+    redis,
+    roomManager,
+    gameEngine,
+  });
 
   httpServer.listen(env.PORT, env.HOST, () => {
     console.log(`Server listening on ${env.HOST}:${env.PORT}`);

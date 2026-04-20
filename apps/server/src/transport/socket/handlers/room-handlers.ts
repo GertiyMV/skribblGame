@@ -5,7 +5,6 @@ import type { RedisClientType } from 'redis';
 
 import {
   calculateTotalMiniRounds,
-  createInitialRoomState,
   getRoomState,
   saveRoomState,
 } from '../../../repositories/room-repository.js';
@@ -15,6 +14,7 @@ import {
   setSessionExpiry,
 } from '../../../repositories/session-repository.js';
 import { RoomManager } from '../../../services/game/room-manager.js';
+import { createRoomWithOwner } from '../../../services/game/room-service.js';
 import { attachSocketSession, tryReconnect } from '../../../services/game/session-service.js';
 import type { RoomState } from '../../../types/types-game.js';
 import type { PlayerSession } from '../../../types/types-session.js';
@@ -36,37 +36,26 @@ export const handleCreateRoom = async (params: {
 }): Promise<void> => {
   const { socket, redis, roomManager, payload } = params;
 
-  const roomId = roomManager.createRoom();
-  const playerId = randomUUID();
-  const sessionId = randomUUID();
+  const { state, session } = await createRoomWithOwner(
+    { nickname: payload.nickname, settingsOverride: payload.settingsOverride },
+    { redis, roomManager },
+  );
 
-  const state = createInitialRoomState({
-    roomId,
-    ownerPlayerId: playerId,
-    ownerNickname: payload.nickname,
-    settingsOverride: payload.settingsOverride,
-  });
-
-  const session: PlayerSession = {
-    sessionId,
-    roomId,
-    playerId,
-    nickname: payload.nickname,
-  };
-
-  await saveRoomState(redis, state);
-  await saveSession(redis, session);
-
-  socket.join(roomId);
+  socket.join(state.roomId);
   attachSocketSession(socket, session);
-  roomManager.addPlayer(roomId, playerId);
+  roomManager.addPlayer(state.roomId, session.playerId);
 
   emitToSocket(
     socket,
     'session_ready',
-    createSessionReadyEvent({ roomId, playerId, reconnectToken: sessionId, state }),
+    createSessionReadyEvent({
+      roomId: state.roomId,
+      playerId: session.playerId,
+      reconnectToken: session.sessionId,
+      state,
+    }),
   );
-  emitToSocket(socket, 'player_joined', createPlayerJoinedEvent(state, playerId));
+  emitToSocket(socket, 'player_joined', createPlayerJoinedEvent(state, session.playerId));
   emitToSocket(socket, 'score_update', createScoreUpdateEvent(state));
 };
 
