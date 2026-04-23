@@ -43,13 +43,32 @@ npm install
 - `npm run format` — проверяет форматирование Prettier
 - `npm run format:write` — исправляет форматирование Prettier
 
-## Docker (Scaffold)
+## Docker
 
-На текущем этапе бизнес-сервисы еще не реализованы, поэтому Docker-конфигурация подготовлена как инфраструктурный каркас:
+`apps/server/Dockerfile` использует multi-stage build:
 
-- `apps/client/Dockerfile` и `apps/server/Dockerfile` используют multi-stage build;
-- `docker-compose.yml` поднимает два контейнера: `client` и `server`;
-- в контейнерах запускается `tsc --watch` через workspace-скрипты, чтобы `docker compose up` держал сервисы в активном состоянии до появления runtime-команд.
+- `deps` — установка зависимостей (`npm ci`);
+- `builder` — компиляция `@skribbl/shared` и `@skribbl/server` в `dist/`;
+- `dev` — финальный образ: запускает скомпилированный сервер (`node apps/server/dist/index.js`).
+
+`docker-compose.yml` поднимает сервисы `server`, `client` и `redis`.
+
+**Порты:**
+
+| Сервис           | Порт   |
+| ---------------- | ------ |
+| server (HTTP/WS) | `3001` |
+| client           | `5173` |
+| redis            | `6379` |
+
+**Переменные окружения сервиса `server`:**
+
+| Переменная      | По умолчанию            | Описание                |
+| --------------- | ----------------------- | ----------------------- |
+| `REDIS_URL`     | `redis://redis:6379`    | URL подключения к Redis |
+| `CLIENT_ORIGIN` | `http://localhost:5173` | Origin клиента для CORS |
+| `PORT`          | `3001`                  | Порт HTTP/WS сервера    |
+| `HOST`          | `0.0.0.0`               | Хост для прослушивания  |
 
 Запуск:
 

@@ -15,6 +15,8 @@ WORKDIR /workspace
 
 COPY --from=deps /workspace/node_modules ./node_modules
 COPY . .
+RUN npm run build --workspace @skribbl/shared
+RUN npm install --prefix apps/client
 
 EXPOSE 5173
 

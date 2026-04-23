@@ -9,15 +9,32 @@ COPY packages/shared/package.json packages/shared/package.json
 
 RUN npm ci
 
-FROM node:24.14.0-alpine AS dev
+FROM node:24.14.0-alpine AS builder
 
 WORKDIR /workspace
 
 COPY --from=deps /workspace/node_modules ./node_modules
 COPY . .
 
-EXPOSE 3000
+RUN npm run build --workspace @skribbl/shared
+RUN npm install --prefix apps/server
+RUN npm run build --workspace @skribbl/server
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD pgrep -f "tsc.*--watch" >/dev/null || exit 1
+FROM node:24.14.0-alpine AS dev
 
-CMD ["npm", "run", "type-check", "--workspace", "@skribbl/server", "--", "--watch", "--preserveWatchOutput"]
+WORKDIR /workspace
+
+COPY --from=deps /workspace/node_modules ./node_modules
+COPY package.json ./package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY --from=builder /workspace/packages/shared/dist ./packages/shared/dist
+COPY apps/server/package.json ./apps/server/package.json
+COPY --from=builder /workspace/apps/server/dist ./apps/server/dist
+RUN npm install --prefix apps/server
+
+EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget -qO /dev/null http://localhost:3001/health || exit 1
+
+CMD ["node", "apps/server/dist/index.js"]
