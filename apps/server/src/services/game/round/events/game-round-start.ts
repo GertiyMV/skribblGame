@@ -1,10 +1,10 @@
 import { RoundPhase } from '@skribbl/shared';
 
-import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
-import { createRoundStartEvent } from '../../transport/socket/event-factories.js';
-import type { GameSocket } from '../../types/types-socket.js';
-import type { RoomState } from '../../types/types-game.js';
-import type { GameEngineContext } from './game-engine-context.js';
+import { emitToRoom, emitToSocket } from '../../../../transport/socket/emitter.js';
+import { createRoundStartEvent } from '../../../../transport/socket/event-factories.js';
+import type { GameSocket } from '../../../../types/types-socket.js';
+import type { RoomState } from '../../../../types/types-game.js';
+import type { GameEngineContext } from '../../engine/game-engine-context.js';
 
 /**
  * Отправляет `round_start`, скрывая варианты слов от угадывающих на этапе выбора слова.

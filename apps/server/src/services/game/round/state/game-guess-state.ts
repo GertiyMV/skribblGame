@@ -1,7 +1,7 @@
 import type { PlayerId, Score } from '@skribbl/shared';
 
-import type { RoomState } from '../../types/types-game.js';
-import { calculateGuesserScore, calculateLeaderContribution } from './game-scoring.js';
+import type { RoomState } from '../../../../types/types-game.js';
+import { calculateGuesserScore, calculateLeaderContribution } from '../rules/game-scoring.js';
 
 interface GuessScoringResult {
   awardedScore: Score;

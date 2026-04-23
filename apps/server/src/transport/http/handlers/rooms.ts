@@ -8,8 +8,8 @@ import {
 } from '@skribbl/shared';
 
 import { getRoomState } from '../../../repositories/room-repository.js';
-import { RoomManager } from '../../../services/game/room-manager.js';
-import { createRoomWithOwner } from '../../../services/game/room-service.js';
+import { RoomManager } from '../../../services/game/room/room-manager.js';
+import { createRoomWithOwner } from '../../../services/game/room/room-service.js';
 import type { RouteHandler } from '../router.js';
 import { sendError, sendJson } from '../router.js';
 

@@ -5,25 +5,25 @@ import {
   type RoomId,
 } from '@skribbl/shared';
 
-import { getRoomState, saveRoomState } from '../../repositories/room-repository.js';
-import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
+import { getRoomState, saveRoomState } from '../../../../repositories/room-repository.js';
+import { emitToRoom, emitToSocket } from '../../../../transport/socket/emitter.js';
 import {
   createGuessResultEvent,
   createHintUpdateEvent,
   createJoinErrorEvent,
   createScoreUpdateEvent,
-} from '../../transport/socket/event-factories.js';
-import type { GameSocket } from '../../types/types-socket.js';
-import type { GameEngineContext } from './game-engine-context.js';
-import { applyCorrectGuess, areAllGuessersFinished } from './game-guess-state.js';
-import { getCurrentPlayer } from './game-state-helpers.js';
+} from '../../../../transport/socket/event-factories.js';
+import type { GameSocket } from '../../../../types/types-socket.js';
+import type { GameEngineContext } from '../../engine/game-engine-context.js';
+import { applyCorrectGuess, areAllGuessersFinished } from '../state/game-guess-state.js';
+import { getCurrentPlayer } from '../state/game-state-helpers.js';
 import {
   emitInvalidRoomContextError,
   getRoomStateOrEmitError,
   hasValidRoomContext,
-} from './game-request-guards.js';
+} from '../guards/game-request-guards.js';
 import { finalizeRoundEnd } from './round-end-flow.js';
-import { revealHint } from './word-mask.js';
+import { revealHint } from '../rules/word-mask.js';
 
 /**
  * Открывает следующую подсказку, если комната всё ещё в активной фазе рисования.

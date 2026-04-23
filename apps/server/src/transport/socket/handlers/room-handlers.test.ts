@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { GamePhase, RoundPhase } from '@skribbl/shared';
 import type { RedisClientType } from 'redis';
 
-import { RoomManager } from '../../../services/game/room-manager.js';
+import { RoomManager } from '../../../services/game/room/room-manager.js';
 import type { RoomState } from '../../../types/types-game.js';
 import type {
   GameNamespace,

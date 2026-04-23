@@ -1,22 +1,25 @@
 import type { ClientToServerEventPayloads, RoomId } from '@skribbl/shared';
 import type { RedisClientType } from 'redis';
 
-import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../types/types-socket.js';
-import { WordService } from '../word-service/word-service.js';
+import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../../types/types-socket.js';
+import { WordService } from '../../word-service/word-service.js';
 import type { GameEngineContext } from './game-engine-context.js';
-import { handleGuess as handleGuessFlow, handleHintTimeout } from './game-guess-flow.js';
+import {
+  handleGuess as handleGuessFlow,
+  handleHintTimeout,
+} from '../round/flows/game-guess-flow.js';
 import {
   handleChooseWord as handleChooseWordFlow,
   handleDrawingTimeout,
   handleRoundEndTimeout,
   handleStartGame as handleStartGameFlow,
   handleWordSelectionTimeout,
-} from './game-start-flow.js';
+} from '../round/flows/game-start-flow.js';
 import {
   RoomTimerScheduler,
   type ClearTimeoutFn,
   type SetTimeoutFn,
-} from './room-timer-scheduler.js';
+} from '../timers/room-timer-scheduler.js';
 
 export class GameEngine {
   private readonly context: GameEngineContext;

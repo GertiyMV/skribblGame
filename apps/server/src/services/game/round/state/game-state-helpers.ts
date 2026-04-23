@@ -1,6 +1,6 @@
 import type { PlayerId } from '@skribbl/shared';
 
-import type { RoomState } from '../../types/types-game.js';
+import type { RoomState } from '../../../../types/types-game.js';
 
 /**
  * Сбрасывает флаги игроков для нового раунда, сохраняя текущего ведущего.

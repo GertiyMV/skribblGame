@@ -2,11 +2,11 @@ import type { RedisClientType } from 'redis';
 
 import type { RoomId } from '@skribbl/shared';
 
-import { getRoomState } from '../../repositories/room-repository.js';
-import { emitToSocket } from '../../transport/socket/emitter.js';
-import { createJoinErrorEvent } from '../../transport/socket/event-factories.js';
-import type { RoomState } from '../../types/types-game.js';
-import type { GameSocket } from '../../types/types-socket.js';
+import { getRoomState } from '../../../../repositories/room-repository.js';
+import { emitToSocket } from '../../../../transport/socket/emitter.js';
+import { createJoinErrorEvent } from '../../../../transport/socket/event-factories.js';
+import type { RoomState } from '../../../../types/types-game.js';
+import type { GameSocket } from '../../../../types/types-socket.js';
 
 /**
  * Проверяет, действует ли сокет в контексте текущей комнаты.

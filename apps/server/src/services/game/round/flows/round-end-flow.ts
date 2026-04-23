@@ -1,13 +1,13 @@
-import { saveRoomState } from '../../repositories/room-repository.js';
-import { emitToRoom } from '../../transport/socket/emitter.js';
+import { saveRoomState } from '../../../../repositories/room-repository.js';
+import { emitToRoom } from '../../../../transport/socket/emitter.js';
 import {
   createRoundEndEvent,
   createScoreUpdateEvent,
   createWordRevealEvent,
-} from '../../transport/socket/event-factories.js';
-import type { RoomState } from '../../types/types-game.js';
-import type { GameEngineContext } from './game-engine-context.js';
-import { createRoundEndState } from './game-phase-state.js';
+} from '../../../../transport/socket/event-factories.js';
+import type { RoomState } from '../../../../types/types-game.js';
+import type { GameEngineContext } from '../../engine/game-engine-context.js';
+import { createRoundEndState } from '../state/game-phase-state.js';
 
 interface FinalizeRoundEndParams {
   context: GameEngineContext;

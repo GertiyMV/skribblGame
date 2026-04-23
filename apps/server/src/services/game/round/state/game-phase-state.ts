@@ -6,11 +6,11 @@ import {
   type Word,
 } from '@skribbl/shared';
 
-import type { RoomState } from '../../types/types-game.js';
+import type { RoomState } from '../../../../types/types-game.js';
 import { buildDrawingState } from './game-state-helpers.js';
-import type { GameEngineContext } from './game-engine-context.js';
+import type { GameEngineContext } from '../../engine/game-engine-context.js';
 import { getNextLeaderPlayerId } from './game-state-helpers.js';
-import { makeMask } from './word-mask.js';
+import { makeMask } from '../rules/word-mask.js';
 
 /**
  * Формирует первое состояние выбора слова при старте игры.

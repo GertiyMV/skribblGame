@@ -5,28 +5,28 @@ import {
   type RoomId,
 } from '@skribbl/shared';
 
-import { getRoomState, saveRoomState } from '../../repositories/room-repository.js';
-import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
+import { getRoomState, saveRoomState } from '../../../../repositories/room-repository.js';
+import { emitToRoom, emitToSocket } from '../../../../transport/socket/emitter.js';
 import {
   createGameOverEvent,
   createJoinErrorEvent,
-} from '../../transport/socket/event-factories.js';
-import type { RoomState } from '../../types/types-game.js';
-import type { GameSocket } from '../../types/types-socket.js';
-import type { GameEngineContext } from './game-engine-context.js';
+} from '../../../../transport/socket/event-factories.js';
+import type { RoomState } from '../../../../types/types-game.js';
+import type { GameSocket } from '../../../../types/types-socket.js';
+import type { GameEngineContext } from '../../engine/game-engine-context.js';
 import {
   createDrawingState,
   createGameOverState,
   createNextWordSelectionState,
   createWordSelectionState,
-} from './game-phase-state.js';
-import { getCurrentPlayer, getWinners, pickRandom } from './game-state-helpers.js';
-import { emitRoundStart } from './game-round-start.js';
+} from '../state/game-phase-state.js';
+import { getCurrentPlayer, getWinners, pickRandom } from '../state/game-state-helpers.js';
+import { emitRoundStart } from '../events/game-round-start.js';
 import {
   emitInvalidRoomContextError,
   getRoomStateOrEmitError,
   hasValidRoomContext,
-} from './game-request-guards.js';
+} from '../guards/game-request-guards.js';
 import { finalizeRoundEnd } from './round-end-flow.js';
 import type { Word } from '@skribbl/shared';
 

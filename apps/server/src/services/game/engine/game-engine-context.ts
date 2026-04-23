@@ -1,8 +1,8 @@
 import type { RedisClientType } from 'redis';
 
-import type { RoomEmitterTarget, GameNamespace } from '../../types/types-socket.js';
-import type { RoomTimerScheduler } from './room-timer-scheduler.js';
-import type { WordService } from '../word-service/word-service.js';
+import type { RoomEmitterTarget, GameNamespace } from '../../../types/types-socket.js';
+import type { RoomTimerScheduler } from '../timers/room-timer-scheduler.js';
+import type { WordService } from '../../word-service/word-service.js';
 
 /**
  * Зависимости времени выполнения, общие для сценариев игрового движка.
