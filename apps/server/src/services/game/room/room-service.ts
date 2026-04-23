@@ -3,10 +3,10 @@ import { randomUUID } from 'node:crypto';
 import type { ClientToServerEventPayloads, Nickname } from '@skribbl/shared';
 import type { RedisClientType } from 'redis';
 
-import { createInitialRoomState, saveRoomState } from '../../repositories/room-repository.js';
-import { saveSession } from '../../repositories/session-repository.js';
-import type { RoomState } from '../../types/types-game.js';
-import type { PlayerSession } from '../../types/types-session.js';
+import { createInitialRoomState, saveRoomState } from '../../../repositories/room-repository.js';
+import { saveSession } from '../../../repositories/session-repository.js';
+import type { RoomState } from '../../../types/types-game.js';
+import type { PlayerSession } from '../../../types/types-session.js';
 import { RoomManager } from './room-manager.js';
 
 export type CreateRoomWithOwnerInput = {

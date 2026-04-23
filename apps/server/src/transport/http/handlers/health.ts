@@ -23,8 +23,8 @@ const pingRedis = async (redis: RedisClientType): Promise<boolean> => {
   }
 };
 
-// TODO: добавить проверку PostgreSQL (SELECT 1) в /health при подключении PG-клиента.
-// См. docs/code-style/logging-and-observability.md §3 — health должен проверять Redis PING и PG SELECT 1,
+// TODO: добавить проверку PostgreSQL (`SELECT 1`) в эндпоинт `/health` при подключении PG-клиента.
+// См. `docs/code-style/logging-and-observability.md`, §3: `/health` должен проверять `Redis PING` и `PG SELECT 1`,
 // отдавать 503 при любой из деградаций.
 export const createHealthHandler = (deps: { redis: RedisClientType }): RouteHandler => {
   return async ({ res }) => {

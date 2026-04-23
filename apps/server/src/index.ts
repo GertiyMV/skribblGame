@@ -7,8 +7,8 @@ import { gameNamespace } from './constants/socket.js';
 import { env } from './config/env.js';
 import { deleteRoomState, getRoomState, saveRoomState } from './repositories/room-repository.js';
 import type { RoomState } from './types/types-game.js';
-import { RoomManager } from './services/game/room-manager.js';
-import { GameEngine } from './services/game/game-engine.js';
+import { RoomManager } from './services/game/room/room-manager.js';
+import { GameEngine } from './services/game/engine/game-engine.js';
 import { connectRedis } from './services/redis/client.js';
 import { createHttpHandler } from './transport/http/create-http-handler.js';
 import { emitToRoom } from './transport/socket/emitter.js';
@@ -37,7 +37,7 @@ const createServer = async (): Promise<void> => {
   const roomManager = new RoomManager(
     (roomId) => deleteRoomState(redis, roomId),
     async (roomId, playerId) => {
-      // TODO: доделать при реализации game loop (обработка истечения реконнект-окна во время игры)
+      // TODO: доделать при реализации игрового цикла (обработка истечения реконнект-окна во время игры)
       const state = await getRoomState(redis, roomId);
       if (!state) {
         return;

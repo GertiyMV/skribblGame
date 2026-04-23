@@ -2,7 +2,7 @@ import type { RedisClientType } from 'redis';
 
 import { getRoomState, saveRoomState } from '../../../repositories/room-repository.js';
 import { getSession, setSessionExpiry } from '../../../repositories/session-repository.js';
-import { RoomManager } from '../../../services/game/room-manager.js';
+import { RoomManager } from '../../../services/game/room/room-manager.js';
 import type { RoomState } from '../../../types/types-game.js';
 import type { GameSocket, RoomEmitterTarget } from '../../../types/types-socket.js';
 import { emitToRoom } from '../emitter.js';

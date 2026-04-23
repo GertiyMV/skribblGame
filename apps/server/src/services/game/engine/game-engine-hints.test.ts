@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { RoundPhase } from '@skribbl/shared';
 
-import { getRoomState } from '../../repositories/room-repository.js';
+import { getRoomState } from '../../../repositories/room-repository.js';
 import { GameEngine } from './game-engine.js';
 import {
   baseState,
@@ -12,7 +12,7 @@ import {
   makeFakeTimers,
   makeRoomEmitter,
   makeSocket,
-} from './game-engine.test-utils.js';
+} from '../testing/game-engine.test-utils.js';
 
 describe('GameEngine hints', () => {
   it('при hintsCount=0 таймеры подсказок не планируются и hint_update не эмитится', async () => {

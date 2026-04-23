@@ -3,7 +3,7 @@ import { URL } from 'node:url';
 
 import type { RedisClientType } from 'redis';
 
-import { RoomManager } from '../../services/game/room-manager.js';
+import { RoomManager } from '../../services/game/room/room-manager.js';
 import { applyCorsHeaders, isPreflight, respondPreflight } from './cors.js';
 import { createHealthHandler } from './handlers/health.js';
 import { createGetRoomHandler, createPostRoomHandler } from './handlers/rooms.js';

@@ -4,8 +4,8 @@ import { handleCreateRoom, handleDisconnect, handleJoinRoom } from './handlers/r
 import { emitToSocket } from './emitter.js';
 import { createRateLimitEvent } from './event-factories.js';
 import { parsePayload } from '../../utils/socket/parse-payload.js';
-import { GameEngine } from '../../services/game/game-engine.js';
-import { RoomManager } from '../../services/game/room-manager.js';
+import { GameEngine } from '../../services/game/engine/game-engine.js';
+import { RoomManager } from '../../services/game/room/room-manager.js';
 import { SocketRateLimiter } from '../../utils/rate-limiter.js';
 import type { GameNamespace, RoomEmitterTarget } from '../../types/types-socket.js';
 

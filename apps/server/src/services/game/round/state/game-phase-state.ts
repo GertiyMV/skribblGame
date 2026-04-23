@@ -6,14 +6,14 @@ import {
   type Word,
 } from '@skribbl/shared';
 
-import type { RoomState } from '../../types/types-game.js';
+import type { RoomState } from '../../../../types/types-game.js';
 import { buildDrawingState } from './game-state-helpers.js';
-import type { GameEngineContext } from './game-engine-context.js';
+import type { GameEngineContext } from '../../engine/game-engine-context.js';
 import { getNextLeaderPlayerId } from './game-state-helpers.js';
-import { makeMask } from './word-mask.js';
+import { makeMask } from '../rules/word-mask.js';
 
 /**
- * Builds the first word-selection state when the game starts.
+ * Формирует первое состояние выбора слова при старте игры.
  */
 export const createWordSelectionState = (
   context: GameEngineContext,
@@ -45,7 +45,7 @@ export const createWordSelectionState = (
 };
 
 /**
- * Builds a drawing-phase state for the chosen word.
+ * Формирует состояние фазы рисования для выбранного слова.
  */
 export const createDrawingState = (state: RoomState, chosenWord: Word): RoomState => {
   const roundEndAt = new Date(Date.now() + state.settings.roundTimeSec * 1000).toISOString();
@@ -68,7 +68,7 @@ export const createDrawingState = (state: RoomState, chosenWord: Word): RoomStat
 };
 
 /**
- * Builds the next word-selection state after round end.
+ * Формирует следующее состояние выбора слова после завершения раунда.
  */
 export const createNextWordSelectionState = (
   context: GameEngineContext,
@@ -94,7 +94,7 @@ export const createNextWordSelectionState = (
 };
 
 /**
- * Applies the shared RoundEnd transition before emitting events.
+ * Применяет общий переход в RoundEnd перед отправкой событий.
  */
 export const createRoundEndState = (
   state: RoomState,
@@ -121,7 +121,7 @@ export const createRoundEndState = (
 };
 
 /**
- * Creates the final game-over state.
+ * Формирует финальное состояние завершения игры.
  */
 export const createGameOverState = (state: RoomState): RoomState => ({
   ...state,

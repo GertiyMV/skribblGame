@@ -1,5 +1,5 @@
 /**
- * Creates a fully hidden mask for the provided word.
+ * Создаёт полностью скрытую маску для переданного слова.
  */
 export const makeMask = (word: string): string =>
   Array.from(word)
@@ -7,7 +7,7 @@ export const makeMask = (word: string): string =>
     .join(' ');
 
 /**
- * Reveals one random unrevealed character while keeping at least one hidden.
+ * Открывает один случайный скрытый символ, сохраняя минимум один скрытый.
  */
 export const revealHint = (word: string, mask: string): string => {
   const chars = mask.split(' ');

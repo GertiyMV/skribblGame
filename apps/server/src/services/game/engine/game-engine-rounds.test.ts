@@ -3,8 +3,8 @@ import { describe, it } from 'node:test';
 
 import { GamePhase, RoundPhase } from '@skribbl/shared';
 
-import { getRoomState } from '../../repositories/room-repository.js';
-import type { WordService } from '../word-service/word-service.js';
+import { getRoomState } from '../../../repositories/room-repository.js';
+import type { WordService } from '../../word-service/word-service.js';
 import { GameEngine } from './game-engine.js';
 import {
   baseState,
@@ -14,7 +14,7 @@ import {
   makeNamespace,
   makeRoomEmitter,
   makeSocket,
-} from './game-engine.test-utils.js';
+} from '../testing/game-engine.test-utils.js';
 
 describe('GameEngine rounds', () => {
   it('переводит комнату в word_selection после start_game от owner', async () => {

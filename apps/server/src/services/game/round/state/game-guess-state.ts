@@ -1,7 +1,7 @@
 import type { PlayerId, Score } from '@skribbl/shared';
 
-import type { RoomState } from '../../types/types-game.js';
-import { calculateGuesserScore, calculateLeaderContribution } from './game-scoring.js';
+import type { RoomState } from '../../../../types/types-game.js';
+import { calculateGuesserScore, calculateLeaderContribution } from '../rules/game-scoring.js';
 
 interface GuessScoringResult {
   awardedScore: Score;
@@ -10,7 +10,7 @@ interface GuessScoringResult {
 }
 
 /**
- * Applies score changes for a correct guess and returns the updated round state.
+ * Применяет изменения очков за правильную попытку и возвращает обновлённое состояние раунда.
  */
 export const applyCorrectGuess = (
   state: RoomState,
@@ -53,7 +53,7 @@ export const applyCorrectGuess = (
 };
 
 /**
- * Returns true when every connected guesser has already guessed.
+ * Возвращает true, когда каждый подключённый угадывающий уже угадал слово.
  */
 export const areAllGuessersFinished = (state: RoomState): boolean => {
   const guessers = state.players.filter(

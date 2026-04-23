@@ -9,8 +9,11 @@ import {
   saveRoomState,
 } from '../../../repositories/room-repository.js';
 import { saveSession } from '../../../repositories/session-repository.js';
-import { RoomManager } from '../../../services/game/room-manager.js';
-import { attachSocketSession, tryReconnect } from '../../../services/game/session-service.js';
+import { RoomManager } from '../../../services/game/room/room-manager.js';
+import {
+  attachSocketSession,
+  tryReconnect,
+} from '../../../services/game/session/session-service.js';
 import type { RoomState } from '../../../types/types-game.js';
 import type { PlayerSession } from '../../../types/types-session.js';
 import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../../types/types-socket.js';

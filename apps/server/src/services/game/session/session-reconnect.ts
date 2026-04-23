@@ -2,17 +2,17 @@ import { randomUUID } from 'node:crypto';
 
 import type { ClientToServerEventPayloads } from '@skribbl/shared';
 
-import { getRoomState, saveRoomState } from '../../repositories/room-repository.js';
-import { getSession, replaceSession } from '../../repositories/session-repository.js';
-import type { RoomState } from '../../types/types-game.js';
-import type { PlayerSession } from '../../types/types-session.js';
-import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../types/types-socket.js';
-import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
+import { getRoomState, saveRoomState } from '../../../repositories/room-repository.js';
+import { getSession, replaceSession } from '../../../repositories/session-repository.js';
+import type { RoomState } from '../../../types/types-game.js';
+import type { PlayerSession } from '../../../types/types-session.js';
+import type { GameNamespace, GameSocket, RoomEmitterTarget } from '../../../types/types-socket.js';
+import { emitToRoom, emitToSocket } from '../../../transport/socket/emitter.js';
 import {
   createPlayerJoinedEvent,
   createScoreUpdateEvent,
   createSessionReadyEvent,
-} from '../../transport/socket/event-factories.js';
+} from '../../../transport/socket/event-factories.js';
 import { attachSocketSession } from './session-socket.js';
 
 const hasMatchingReconnectPayload = (

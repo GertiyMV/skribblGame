@@ -5,28 +5,28 @@ import {
   type RoomId,
 } from '@skribbl/shared';
 
-import { getRoomState, saveRoomState } from '../../repositories/room-repository.js';
-import { emitToRoom, emitToSocket } from '../../transport/socket/emitter.js';
+import { getRoomState, saveRoomState } from '../../../../repositories/room-repository.js';
+import { emitToRoom, emitToSocket } from '../../../../transport/socket/emitter.js';
 import {
   createGameOverEvent,
   createJoinErrorEvent,
-} from '../../transport/socket/event-factories.js';
-import type { RoomState } from '../../types/types-game.js';
-import type { GameSocket } from '../../types/types-socket.js';
-import type { GameEngineContext } from './game-engine-context.js';
+} from '../../../../transport/socket/event-factories.js';
+import type { RoomState } from '../../../../types/types-game.js';
+import type { GameSocket } from '../../../../types/types-socket.js';
+import type { GameEngineContext } from '../../engine/game-engine-context.js';
 import {
   createDrawingState,
   createGameOverState,
   createNextWordSelectionState,
   createWordSelectionState,
-} from './game-phase-state.js';
-import { getCurrentPlayer, getWinners, pickRandom } from './game-state-helpers.js';
-import { emitRoundStart } from './game-round-start.js';
+} from '../state/game-phase-state.js';
+import { getCurrentPlayer, getWinners, pickRandom } from '../state/game-state-helpers.js';
+import { emitRoundStart } from '../events/game-round-start.js';
 import {
   emitInvalidRoomContextError,
   getRoomStateOrEmitError,
   hasValidRoomContext,
-} from './game-request-guards.js';
+} from '../guards/game-request-guards.js';
 import { finalizeRoundEnd } from './round-end-flow.js';
 import type { Word } from '@skribbl/shared';
 
@@ -36,7 +36,7 @@ interface DrawingPhaseCallbacks {
 }
 
 /**
- * Starts the game and moves the room into `word_selection`.
+ * Запускает игру и переводит комнату в фазу `word_selection`.
  */
 export const handleStartGame = async (
   context: GameEngineContext,
@@ -106,7 +106,7 @@ export const handleStartGame = async (
 };
 
 /**
- * Applies the leader's chosen word and moves the room into `drawing`.
+ * Применяет выбранное ведущим слово и переводит комнату в `drawing`.
  */
 export const handleChooseWord = async (
   context: GameEngineContext,
@@ -168,7 +168,7 @@ export const handleChooseWord = async (
 };
 
 /**
- * Auto-selects a word when the leader does not choose one in time.
+ * Автоматически выбирает слово, если ведущий не успел выбрать его вовремя.
  */
 export const handleWordSelectionTimeout = async (
   context: GameEngineContext,
@@ -196,7 +196,7 @@ export const handleWordSelectionTimeout = async (
 };
 
 /**
- * Finishes a drawing phase when the round timer expires.
+ * Завершает фазу рисования, когда истекает таймер раунда.
  */
 export const handleDrawingTimeout = async (
   context: GameEngineContext,
@@ -230,7 +230,7 @@ export const handleDrawingTimeout = async (
 };
 
 /**
- * Starts the next mini-round or finishes the game after round end.
+ * Запускает следующий мини-раунд или завершает игру после конца раунда.
  */
 export const handleRoundEndTimeout = async (
   context: GameEngineContext,

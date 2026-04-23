@@ -3,13 +3,13 @@ import { setTimeout } from 'node:timers';
 import { GamePhase, RoundPhase } from '@skribbl/shared';
 import type { RedisClientType } from 'redis';
 
-import type { RoomState } from '../../types/types-game.js';
+import type { RoomState } from '../../../types/types-game.js';
 import type {
   GameNamespace,
   GameSocket,
   RoomEmitterTarget,
   SocketData,
-} from '../../types/types-socket.js';
+} from '../../../types/types-socket.js';
 
 export const flushAsync = async (): Promise<void> => {
   await Promise.resolve();

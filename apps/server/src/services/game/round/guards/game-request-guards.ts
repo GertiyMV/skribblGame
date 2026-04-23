@@ -2,14 +2,14 @@ import type { RedisClientType } from 'redis';
 
 import type { RoomId } from '@skribbl/shared';
 
-import { getRoomState } from '../../repositories/room-repository.js';
-import { emitToSocket } from '../../transport/socket/emitter.js';
-import { createJoinErrorEvent } from '../../transport/socket/event-factories.js';
-import type { RoomState } from '../../types/types-game.js';
-import type { GameSocket } from '../../types/types-socket.js';
+import { getRoomState } from '../../../../repositories/room-repository.js';
+import { emitToSocket } from '../../../../transport/socket/emitter.js';
+import { createJoinErrorEvent } from '../../../../transport/socket/event-factories.js';
+import type { RoomState } from '../../../../types/types-game.js';
+import type { GameSocket } from '../../../../types/types-socket.js';
 
 /**
- * Checks whether the socket is acting within its current room context.
+ * Проверяет, действует ли сокет в контексте текущей комнаты.
  */
 export const hasValidRoomContext = (socket: GameSocket, roomId: RoomId): boolean => {
   const { playerId, roomId: socketRoomId } = socket.data;
@@ -17,7 +17,7 @@ export const hasValidRoomContext = (socket: GameSocket, roomId: RoomId): boolean
 };
 
 /**
- * Emits a standard room-context error on the `guess_result` channel.
+ * Отправляет стандартную ошибку контекста комнаты в канал `guess_result`.
  */
 export const emitInvalidRoomContextError = (socket: GameSocket, roomId: RoomId): void => {
   emitToSocket(
@@ -32,7 +32,7 @@ export const emitInvalidRoomContextError = (socket: GameSocket, roomId: RoomId):
 };
 
 /**
- * Loads room state or emits the canonical not-found error.
+ * Загружает состояние комнаты или отправляет стандартную ошибку отсутствия комнаты.
  */
 export const getRoomStateOrEmitError = async (
   redis: RedisClientType,

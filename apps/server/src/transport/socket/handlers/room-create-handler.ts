@@ -1,9 +1,9 @@
 import type { ClientToServerEventPayloads } from '@skribbl/shared';
 import type { RedisClientType } from 'redis';
 
-import { RoomManager } from '../../../services/game/room-manager.js';
-import { createRoomWithOwner } from '../../../services/game/room-service.js';
-import { attachSocketSession } from '../../../services/game/session-service.js';
+import { RoomManager } from '../../../services/game/room/room-manager.js';
+import { createRoomWithOwner } from '../../../services/game/room/room-service.js';
+import { attachSocketSession } from '../../../services/game/session/session-service.js';
 import type { GameSocket, RoomEmitterTarget } from '../../../types/types-socket.js';
 import { emitToSocket } from '../emitter.js';
 import {

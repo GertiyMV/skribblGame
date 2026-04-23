@@ -1,5 +1,5 @@
-import type { GameSocket } from '../../types/types-socket.js';
-import type { PlayerSession } from '../../types/types-session.js';
+import type { GameSocket } from '../../../types/types-socket.js';
+import type { PlayerSession } from '../../../types/types-session.js';
 
 export const attachSocketSession = (socket: GameSocket, session: PlayerSession): void => {
   socket.data.playerId = session.playerId;
