@@ -14,7 +14,7 @@ interface RoomTimerState {
 }
 
 /**
- * Stores and manages all timers scheduled for a room.
+ * Хранит и управляет всеми таймерами, запланированными для комнаты.
  */
 export class RoomTimerScheduler {
   private readonly roomTimers = new Map<RoomId, RoomTimerState>();

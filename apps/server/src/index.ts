@@ -37,7 +37,7 @@ const createServer = async (): Promise<void> => {
   const roomManager = new RoomManager(
     (roomId) => deleteRoomState(redis, roomId),
     async (roomId, playerId) => {
-      // TODO: доделать при реализации game loop (обработка истечения реконнект-окна во время игры)
+      // TODO: доделать при реализации игрового цикла (обработка истечения реконнект-окна во время игры)
       const state = await getRoomState(redis, roomId);
       if (!state) {
         return;

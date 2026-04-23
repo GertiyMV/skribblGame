@@ -30,7 +30,7 @@ const getGuesserPositionBonus = (position: number): number => {
 };
 
 /**
- * Calculates the score for a player who guessed the word.
+ * Вычисляет очки для игрока, который угадал слово.
  */
 export const calculateGuesserScore = (
   remainingTimeSec: number,
@@ -50,7 +50,7 @@ export const calculateGuesserScore = (
 };
 
 /**
- * Calculates the points awarded to the drawing leader per correct guess.
+ * Вычисляет очки, начисляемые ведущему за каждое правильное угадывание.
  */
 export const calculateLeaderContribution = (
   remainingTimeSec: number,

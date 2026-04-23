@@ -36,7 +36,7 @@ interface DrawingPhaseCallbacks {
 }
 
 /**
- * Starts the game and moves the room into `word_selection`.
+ * Запускает игру и переводит комнату в фазу `word_selection`.
  */
 export const handleStartGame = async (
   context: GameEngineContext,
@@ -106,7 +106,7 @@ export const handleStartGame = async (
 };
 
 /**
- * Applies the leader's chosen word and moves the room into `drawing`.
+ * Применяет выбранное ведущим слово и переводит комнату в `drawing`.
  */
 export const handleChooseWord = async (
   context: GameEngineContext,
@@ -168,7 +168,7 @@ export const handleChooseWord = async (
 };
 
 /**
- * Auto-selects a word when the leader does not choose one in time.
+ * Автоматически выбирает слово, если ведущий не успел выбрать его вовремя.
  */
 export const handleWordSelectionTimeout = async (
   context: GameEngineContext,
@@ -196,7 +196,7 @@ export const handleWordSelectionTimeout = async (
 };
 
 /**
- * Finishes a drawing phase when the round timer expires.
+ * Завершает фазу рисования, когда истекает таймер раунда.
  */
 export const handleDrawingTimeout = async (
   context: GameEngineContext,
@@ -230,7 +230,7 @@ export const handleDrawingTimeout = async (
 };
 
 /**
- * Starts the next mini-round or finishes the game after round end.
+ * Запускает следующий мини-раунд или завершает игру после конца раунда.
  */
 export const handleRoundEndTimeout = async (
   context: GameEngineContext,

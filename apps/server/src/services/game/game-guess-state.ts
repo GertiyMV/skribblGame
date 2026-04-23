@@ -10,7 +10,7 @@ interface GuessScoringResult {
 }
 
 /**
- * Applies score changes for a correct guess and returns the updated round state.
+ * Применяет изменения очков за правильную попытку и возвращает обновлённое состояние раунда.
  */
 export const applyCorrectGuess = (
   state: RoomState,
@@ -53,7 +53,7 @@ export const applyCorrectGuess = (
 };
 
 /**
- * Returns true when every connected guesser has already guessed.
+ * Возвращает true, когда каждый подключённый угадывающий уже угадал слово.
  */
 export const areAllGuessersFinished = (state: RoomState): boolean => {
   const guessers = state.players.filter(

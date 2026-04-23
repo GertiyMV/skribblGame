@@ -6,7 +6,7 @@ import { RoomManager } from './room-manager.js';
 
 const noop = async (): Promise<void> => {};
 
-// Fake timer that fires all pending callbacks on demand
+// Фейковый таймер, который по команде вызывает все ожидающие колбэки
 const makeFakeTimers = () => {
   const pending = new Map<number, () => void>();
   let nextId = 1;

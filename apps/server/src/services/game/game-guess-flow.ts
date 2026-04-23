@@ -26,7 +26,7 @@ import { finalizeRoundEnd } from './round-end-flow.js';
 import { revealHint } from './word-mask.js';
 
 /**
- * Reveals the next hint if the room is still in the active drawing phase.
+ * Открывает следующую подсказку, если комната всё ещё в активной фазе рисования.
  */
 export const handleHintTimeout = async (
   context: GameEngineContext,
@@ -62,7 +62,7 @@ export const handleHintTimeout = async (
 };
 
 /**
- * Processes a player's guess and completes the round when everybody guessed.
+ * Обрабатывает попытку угадывания и завершает раунд, когда все угадали.
  */
 export const handleGuess = async (
   context: GameEngineContext,

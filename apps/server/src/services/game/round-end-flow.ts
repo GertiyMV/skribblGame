@@ -16,7 +16,7 @@ interface FinalizeRoundEndParams {
 }
 
 /**
- * Persists and emits the shared round-end transition.
+ * Сохраняет и отправляет общий переход в завершение раунда.
  */
 export const finalizeRoundEnd = async ({
   context,

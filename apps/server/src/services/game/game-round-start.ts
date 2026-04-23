@@ -7,7 +7,7 @@ import type { RoomState } from '../../types/types-game.js';
 import type { GameEngineContext } from './game-engine-context.js';
 
 /**
- * Emits `round_start`, hiding word choices from guessers during word selection.
+ * Отправляет `round_start`, скрывая варианты слов от угадывающих на этапе выбора слова.
  */
 export const emitRoundStart = async (
   context: GameEngineContext,

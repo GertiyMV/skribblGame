@@ -5,7 +5,7 @@ import type { RoomTimerScheduler } from './room-timer-scheduler.js';
 import type { WordService } from '../word-service/word-service.js';
 
 /**
- * Runtime dependencies shared by game engine flows.
+ * Зависимости времени выполнения, общие для сценариев игрового движка.
  */
 export interface GameEngineContext {
   redis: RedisClientType;

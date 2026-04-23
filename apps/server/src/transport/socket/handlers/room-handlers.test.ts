@@ -14,7 +14,7 @@ import type {
 } from '../../../types/types-socket.js';
 import { handleJoinRoom } from './room-handlers.js';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── вспомогательные функции ──────────────────────────────────────────────────
 
 const BASE_ROOM_STATE: RoomState = {
   roomId: 'ABCDEF',
@@ -106,7 +106,7 @@ const makeRoomEmitterMock = () => {
   return { target, broadcast };
 };
 
-// ── tests ─────────────────────────────────────────────────────────────────────
+// ── тесты ─────────────────────────────────────────────────────────────────────
 
 describe('handleJoinRoom', () => {
   it('эмитит room_not_found, если комнаты нет в Redis', async () => {

@@ -3,7 +3,7 @@ import type { PlayerId } from '@skribbl/shared';
 import type { RoomState } from '../../types/types-game.js';
 
 /**
- * Resets per-round player flags while keeping the current leader.
+ * Сбрасывает флаги игроков для нового раунда, сохраняя текущего ведущего.
  */
 export const buildDrawingState = (state: RoomState): RoomState => ({
   ...state,
@@ -15,13 +15,13 @@ export const buildDrawingState = (state: RoomState): RoomState => ({
 });
 
 /**
- * Returns the player entry for the provided id.
+ * Возвращает запись игрока по переданному идентификатору.
  */
 export const getCurrentPlayer = (state: RoomState, playerId: PlayerId) =>
   state.players.find((player) => player.id === playerId);
 
 /**
- * Picks the next connected player to become the round leader.
+ * Выбирает следующего подключённого игрока на роль ведущего раунда.
  */
 export const getNextLeaderPlayerId = (state: RoomState): PlayerId => {
   const currentIndex = state.players.findIndex((player) => player.id === state.leaderPlayerId);
@@ -41,7 +41,7 @@ export const getNextLeaderPlayerId = (state: RoomState): PlayerId => {
 };
 
 /**
- * Returns all winner ids for the final scoreboard.
+ * Возвращает идентификаторы всех победителей для итоговой таблицы.
  */
 export const getWinners = (state: RoomState): PlayerId[] => {
   const maxScore = Math.max(...state.players.map((player) => player.score));
@@ -49,7 +49,7 @@ export const getWinners = (state: RoomState): PlayerId[] => {
 };
 
 /**
- * Picks a random item from a readonly array.
+ * Возвращает случайный элемент из массива только для чтения.
  */
 export const pickRandom = <T>(array: readonly T[]): T | undefined =>
   array[Math.floor(Math.random() * array.length)];
