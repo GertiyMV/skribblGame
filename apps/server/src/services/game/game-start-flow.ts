@@ -45,7 +45,7 @@ export const handleStartGame = async (
   onWordSelectionTimeout: (roomId: RoomId, miniRoundNumber: number) => void,
 ): Promise<void> => {
   const { playerId } = socket.data;
-  if (!hasValidRoomContext(socket, payload.roomId)) {
+  if (!playerId || !hasValidRoomContext(socket, payload.roomId)) {
     emitInvalidRoomContextError(socket, payload.roomId);
     return;
   }
@@ -115,7 +115,7 @@ export const handleChooseWord = async (
   callbacks: DrawingPhaseCallbacks,
 ): Promise<void> => {
   const { playerId } = socket.data;
-  if (!hasValidRoomContext(socket, payload.roomId)) {
+  if (!playerId || !hasValidRoomContext(socket, payload.roomId)) {
     emitInvalidRoomContextError(socket, payload.roomId);
     return;
   }
