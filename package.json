@@ -21,6 +21,7 @@
     "docker:logs": "docker compose logs -f",
     "pretest": "npm run check:dist-sync",
     "pretype-check": "npm run build --workspace @skribbl/shared",
+    "prebuild": "npm run build --workspace @skribbl/shared",
     "lint": "npm run lint --workspaces --if-present",
     "type-check": "npm run type-check --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
