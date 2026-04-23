@@ -11,6 +11,7 @@ import { RoomManager } from './services/game/room/room-manager.js';
 import { GameEngine } from './services/game/engine/game-engine.js';
 import { connectRedis } from './services/redis/client.js';
 import { createHttpHandler } from './transport/http/create-http-handler.js';
+import { HttpRateLimiter } from './utils/http-rate-limiter.js';
 import { emitToRoom } from './transport/socket/emitter.js';
 import { createScoreUpdateEvent } from './transport/socket/event-factories.js';
 import { registerGameHandlers } from './transport/socket/register-game-handlers.js';
@@ -54,7 +55,13 @@ const createServer = async (): Promise<void> => {
   );
 
   const httpServer = http.createServer(
-    createHttpHandler({ redis, roomManager, clientOrigin: env.CLIENT_ORIGIN }),
+    createHttpHandler({
+      redis,
+      roomManager,
+      clientOrigin: env.CLIENT_ORIGIN,
+      rateLimiter: new HttpRateLimiter(env.HTTP_CREATE_ROOM_RATE_LIMIT),
+      trustProxy: env.TRUST_PROXY,
+    }),
   );
 
   const io: TypedIoServer = new Server(httpServer, {

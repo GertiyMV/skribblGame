@@ -1,5 +1,3 @@
-import type { RedisClientType } from 'redis';
-
 import {
   type CreateRoomResponse,
   type RoomInfoResponse,
@@ -8,16 +6,25 @@ import {
 } from '@skribbl/shared';
 
 import { getRoomState } from '../../../repositories/room-repository.js';
-import { RoomManager } from '../../../services/game/room/room-manager.js';
 import { createRoomWithOwner } from '../../../services/game/room/room-service.js';
+import type { HttpHandlerDeps } from '../../../types/types-http.js';
+import { extractIp } from '../../../utils/http-rate-limiter.js';
 import type { RouteHandler } from '../router.js';
 import { sendError, sendJson } from '../router.js';
 
-export const createPostRoomHandler = (deps: {
-  redis: RedisClientType;
-  roomManager: RoomManager;
-}): RouteHandler => {
-  return async ({ res, body }) => {
+export const createPostRoomHandler = (
+  deps: Omit<HttpHandlerDeps, 'clientOrigin'>,
+): RouteHandler => {
+  return async ({ req, res, body }) => {
+    if (deps.rateLimiter) {
+      const ip = extractIp(req, deps.trustProxy ?? false);
+      if (!deps.rateLimiter.consume(ip)) {
+        res.setHeader('Retry-After', String(deps.rateLimiter.retryAfterSeconds));
+        sendError(res, 429, 'rate_limit_exceeded', 'Too many requests');
+        return;
+      }
+    }
+
     const parseResult = createRoomRequestSchema.safeParse(body);
     if (!parseResult.success) {
       sendError(
@@ -48,7 +55,7 @@ export const createPostRoomHandler = (deps: {
   };
 };
 
-export const createGetRoomHandler = (deps: { redis: RedisClientType }): RouteHandler => {
+export const createGetRoomHandler = (deps: Pick<HttpHandlerDeps, 'redis'>): RouteHandler => {
   return async ({ res, params }) => {
     const code = params.code ?? '';
     const codeParse = roomIdSchema.safeParse(code);

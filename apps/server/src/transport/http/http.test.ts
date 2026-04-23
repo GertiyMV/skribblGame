@@ -8,6 +8,8 @@ import type { RedisClientType } from 'redis';
 
 import { RoomManager } from '../../services/game/room/room-manager.js';
 import type { RoomState } from '../../types/types-game.js';
+import { HttpRateLimiter } from '../../utils/http-rate-limiter.js';
+import type { HttpHandlerDeps } from '../../types/types-http.js';
 import { createHttpHandler } from './create-http-handler.js';
 
 type FakeRedisOverrides = {
@@ -33,11 +35,16 @@ const makeFakeRedis = (overrides: FakeRedisOverrides = {}) => {
   return { redis, storage, hashStorage };
 };
 
-const startServer = (redis: RedisClientType, roomManager: RoomManager) => {
+const startServer = (
+  redis: RedisClientType,
+  roomManager: RoomManager,
+  extraDeps?: Pick<HttpHandlerDeps, 'rateLimiter' | 'trustProxy'>,
+) => {
   const handler = createHttpHandler({
     redis,
     roomManager,
     clientOrigin: 'http://localhost:5173',
+    ...extraDeps,
   });
   const server = http.createServer((req, res) => {
     void handler(req, res);
@@ -235,6 +242,93 @@ describe('GET /rooms/:code', () => {
       assert.equal(response.status, 400);
       const body = (await response.json()) as { error: { code: string } };
       assert.equal(body.error.code, 'invalid_room_code');
+    } finally {
+      await closeServer(server);
+    }
+  });
+});
+
+describe('POST /rooms — rate limiting', () => {
+  const postRoom = (url: string, extraHeaders?: Record<string, string>) =>
+    fetch(`${url}/rooms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...extraHeaders },
+      body: JSON.stringify({ nickname: 'Alice' }),
+    });
+
+  it('первые N запросов проходят, N+1-й получает 429 с Retry-After и rate_limit_exceeded', async () => {
+    let now = 0;
+    const limiter = new HttpRateLimiter(5, () => now);
+    const { redis } = makeFakeRedis();
+    const { server, url } = await startServer(redis, noopManager(), { rateLimiter: limiter });
+    try {
+      for (let i = 0; i < 5; i++) {
+        const res = await postRoom(url);
+        assert.equal(res.status, 201, `request ${i + 1} should succeed`);
+      }
+      const blocked = await postRoom(url);
+      assert.equal(blocked.status, 429);
+      assert.ok(blocked.headers.get('retry-after'), 'Retry-After header should be present');
+      const body = (await blocked.json()) as { error: { code: string } };
+      assert.equal(body.error.code, 'rate_limit_exceeded');
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  it('лимит восстанавливается после истечения окна', async () => {
+    let now = 0;
+    const limiter = new HttpRateLimiter(5, () => now);
+    const { redis } = makeFakeRedis();
+    const { server, url } = await startServer(redis, noopManager(), { rateLimiter: limiter });
+    try {
+      for (let i = 0; i < 5; i++) await postRoom(url);
+      assert.equal((await postRoom(url)).status, 429);
+
+      now += 60_000;
+
+      const recovered = await postRoom(url);
+      assert.equal(recovered.status, 201, 'should succeed after window expires');
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  it('лимиты разных IP изолированы друг от друга', async () => {
+    let now = 0;
+    const limiter = new HttpRateLimiter(1, () => now);
+    const { redis } = makeFakeRedis();
+    const { server, url } = await startServer(redis, noopManager(), {
+      rateLimiter: limiter,
+      trustProxy: true,
+    });
+    try {
+      assert.equal((await postRoom(url, { 'X-Forwarded-For': '10.0.0.1' })).status, 201);
+      assert.equal((await postRoom(url, { 'X-Forwarded-For': '10.0.0.1' })).status, 429);
+      assert.equal(
+        (await postRoom(url, { 'X-Forwarded-For': '10.0.0.2' })).status,
+        201,
+        '10.0.0.2 bucket should be independent',
+      );
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  it('лимит настраивается через параметр конструктора HttpRateLimiter', async () => {
+    let now = 0;
+    const limiter = new HttpRateLimiter(3, () => now);
+    const { redis } = makeFakeRedis();
+    const { server, url } = await startServer(redis, noopManager(), { rateLimiter: limiter });
+    try {
+      for (let i = 0; i < 3; i++) {
+        assert.equal(
+          (await postRoom(url)).status,
+          201,
+          `request ${i + 1} should pass with limit=3`,
+        );
+      }
+      assert.equal((await postRoom(url)).status, 429, '4th request should be blocked with limit=3');
     } finally {
       await closeServer(server);
     }
