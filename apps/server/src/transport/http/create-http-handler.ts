@@ -1,21 +1,13 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { URL } from 'node:url';
 
-import type { RedisClientType } from 'redis';
-
-import { RoomManager } from '../../services/game/room/room-manager.js';
+import type { HttpHandlerDeps } from '../../types/types-http.js';
 import { applyCorsHeaders, isPreflight, respondPreflight } from './cors.js';
 import { createHealthHandler } from './handlers/health.js';
 import { createGetRoomHandler, createPostRoomHandler } from './handlers/rooms.js';
 import { Router, readJsonBody, sendError } from './router.js';
 
 const HTTP_MAX_BODY_BYTES = 16 * 1024;
-
-export type HttpHandlerDeps = {
-  redis: RedisClientType;
-  roomManager: RoomManager;
-  clientOrigin: string;
-};
 
 export type HttpRequestHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 
@@ -25,7 +17,12 @@ export const createHttpHandler = (deps: HttpHandlerDeps): HttpRequestHandler => 
   router.on(
     'POST',
     '/rooms',
-    createPostRoomHandler({ redis: deps.redis, roomManager: deps.roomManager }),
+    createPostRoomHandler({
+      redis: deps.redis,
+      roomManager: deps.roomManager,
+      rateLimiter: deps.rateLimiter,
+      trustProxy: deps.trustProxy,
+    }),
   );
   router.on('GET', '/rooms/:code', createGetRoomHandler({ redis: deps.redis }));
 

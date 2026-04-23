@@ -14,6 +14,7 @@ export const httpErrorCodeSchema = z.enum([
   'invalid_room_code',
   'internal_error',
   'service_unavailable',
+  'rate_limit_exceeded',
 ]);
 
 export const httpErrorResponseSchema = z.object({
