@@ -6,8 +6,21 @@ services:
       target: dev
     image: skribbl-server-dev
     container_name: skribbl-server-dev
+    ports:
+      - '3001:3001'
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+      - /workspace/apps/server/node_modules
+      - /workspace/packages/shared/node_modules
+    command: >
+      sh -c "npm run build --workspace @skribbl/shared -- --watch --preserveWatchOutput &
+      npx tsc -p apps/server/tsconfig.json --watch --preserveWatchOutput &
+      while [ ! -f apps/server/dist/index.js ]; do sleep 1; done;
+      node --watch apps/server/dist/index.js"
     environment:
       - REDIS_URL=redis://redis:6379
+      - CLIENT_ORIGIN=${CLIENT_ORIGIN:-http://localhost:5173}
     depends_on:
       - redis
 
@@ -18,6 +31,11 @@ services:
       target: dev
     image: skribbl-client-dev
     container_name: skribbl-client-dev
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+      - /workspace/apps/client/node_modules
+      - /workspace/packages/shared/node_modules
 
   redis:
     image: redis:7-alpine
