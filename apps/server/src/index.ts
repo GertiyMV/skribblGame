@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 
 import { gameNamespace } from './constants/socket.js';
 import { env } from './config/env.js';
+import { createLogger } from './logger.js';
 import { deleteRoomState, getRoomState, saveRoomState } from './repositories/room-repository.js';
 import type { RoomState } from './types/types-game.js';
 import { RoomManager } from './services/game/room/room-manager.js';
@@ -23,6 +24,7 @@ import type {
 } from './types/types-socket.js';
 
 const createServer = async (): Promise<void> => {
+  const logger = await createLogger();
   const redis = await connectRedis();
 
   const emitterRef: { current: RoomEmitterTarget | null } = { current: null };
@@ -61,6 +63,7 @@ const createServer = async (): Promise<void> => {
       clientOrigin: env.CLIENT_ORIGIN,
       rateLimiter: new HttpRateLimiter(env.HTTP_CREATE_ROOM_RATE_LIMIT),
       trustProxy: env.TRUST_PROXY,
+      logger,
     }),
   );
 
@@ -87,10 +90,11 @@ const createServer = async (): Promise<void> => {
     redis,
     roomManager,
     gameEngine,
+    logger,
   });
 
   httpServer.listen(env.PORT, env.HOST, () => {
-    console.log(`Server listening on ${env.HOST}:${env.PORT}`);
+    logger.info({ host: env.HOST, port: env.PORT }, 'server listening');
   });
 
   const shutdown = async (): Promise<void> => {

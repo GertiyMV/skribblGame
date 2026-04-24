@@ -13,7 +13,7 @@ import type { RouteHandler } from '../router.js';
 import { sendError, sendJson } from '../router.js';
 
 export const createPostRoomHandler = (
-  deps: Omit<HttpHandlerDeps, 'clientOrigin'>,
+  deps: Omit<HttpHandlerDeps, 'clientOrigin' | 'logger'>,
 ): RouteHandler => {
   return async ({ req, res, body }) => {
     if (deps.rateLimiter) {

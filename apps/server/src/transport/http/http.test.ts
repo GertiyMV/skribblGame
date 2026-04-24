@@ -11,6 +11,7 @@ import type { RoomState } from '../../types/types-game.js';
 import { HttpRateLimiter } from '../../utils/http-rate-limiter.js';
 import type { HttpHandlerDeps } from '../../types/types-http.js';
 import { createHttpHandler } from './create-http-handler.js';
+import { noopLogger } from '../../logger.js';
 
 type FakeRedisOverrides = {
   ping?: () => Promise<string>;
@@ -44,6 +45,7 @@ const startServer = (
     redis,
     roomManager,
     clientOrigin: 'http://localhost:5173',
+    logger: noopLogger,
     ...extraDeps,
   });
   const server = http.createServer((req, res) => {

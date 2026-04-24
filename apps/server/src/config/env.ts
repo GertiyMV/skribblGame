@@ -8,6 +8,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   HTTP_CREATE_ROOM_RATE_LIMIT: z.coerce.number().int().min(1).default(5),
   TRUST_PROXY: z.coerce.boolean().default(false),
+  LOG_REQUESTS: z.coerce.boolean().default(true),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });
 
 export type Env = z.infer<typeof envSchema>;

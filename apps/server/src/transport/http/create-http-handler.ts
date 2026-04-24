@@ -27,6 +27,20 @@ export const createHttpHandler = (deps: HttpHandlerDeps): HttpRequestHandler => 
   router.on('GET', '/rooms/:code', createGetRoomHandler({ redis: deps.redis }));
 
   return async (req, res) => {
+    const start = Date.now();
+
+    res.on('finish', () => {
+      deps.logger.info(
+        {
+          method: req.method,
+          path: req.url,
+          statusCode: res.statusCode,
+          durationMs: Date.now() - start,
+        },
+        'http request',
+      );
+    });
+
     try {
       if (isPreflight(req)) {
         respondPreflight(res, deps.clientOrigin);
@@ -59,7 +73,7 @@ export const createHttpHandler = (deps: HttpHandlerDeps): HttpRequestHandler => 
 
       await match.handler({ req, res, params: match.params, body });
     } catch (error) {
-      console.error('HTTP handler error', error);
+      deps.logger.error({ error }, 'HTTP handler error');
       if (!res.headersSent) {
         sendError(res, 500, 'internal_error', 'Internal server error');
       } else {

@@ -14,5 +14,8 @@
     "type-check": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --test-isolation=none --test \"src/**/*.test.ts\"",
     "build": "tsc -p tsconfig.json && node ./scripts/copy-word-dictionaries.mjs"
+  },
+  "devDependencies": {
+    "pino": "^10.3.1"
   }
 }
