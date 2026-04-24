@@ -13,8 +13,8 @@
   ],
   "scripts": {
     "check:dist-sync": "node ./scripts/check-dist-sync.mjs",
-    "docker:up": "docker compose up",
-    "docker:up:build": "docker compose up --build",
+    "docker:up": "docker compose up -d",
+    "docker:up:build": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:restart": "docker compose down && docker compose up",
     "docker:build": "docker compose build",

@@ -8,6 +8,7 @@ import { GameEngine } from '../../services/game/engine/game-engine.js';
 import { RoomManager } from '../../services/game/room/room-manager.js';
 import { SocketRateLimiter } from '../../utils/rate-limiter.js';
 import type { GameNamespace, RoomEmitterTarget } from '../../types/types-socket.js';
+import type { Logger } from '../../logger.js';
 
 export const registerGameHandlers = (params: {
   io: GameNamespace;
@@ -15,14 +16,20 @@ export const registerGameHandlers = (params: {
   redis: RedisClientType;
   roomManager: RoomManager;
   gameEngine: GameEngine;
+  logger: Logger;
 }): void => {
-  const { io, roomEmitterTarget, redis, roomManager, gameEngine } = params;
+  const { io, roomEmitterTarget, redis, roomManager, gameEngine, logger } = params;
 
   io.on('connection', (socket) => {
+    const socketLogger = logger.child({ socketId: socket.id });
+    socketLogger.info({}, 'socket connected');
+
     const rateLimiter = new SocketRateLimiter();
 
     socket.use((packet, next) => {
       const [event] = packet as [string, ...unknown[]];
+
+      socketLogger.info({ event }, 'socket event');
 
       if (!rateLimiter.consume(event)) {
         const { roomId, playerId } = socket.data;
@@ -56,6 +63,7 @@ export const registerGameHandlers = (params: {
     });
 
     socket.on('disconnect', async (reason) => {
+      socketLogger.info({ reason }, 'socket disconnected');
       await handleDisconnect(roomEmitterTarget, socket, redis, roomManager, reason);
     });
 
