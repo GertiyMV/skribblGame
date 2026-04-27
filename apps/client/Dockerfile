@@ -11,6 +11,9 @@ RUN npm ci
 
 FROM node:24.14.0-alpine AS dev
 
+ARG VERSION=dev
+LABEL org.opencontainers.image.version=$VERSION
+
 WORKDIR /workspace
 
 COPY --from=deps /workspace/node_modules ./node_modules

@@ -1,7 +1,7 @@
 {
   "name": "skribbl-game",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "repository": {
     "type": "git",
@@ -13,11 +13,15 @@
   ],
   "scripts": {
     "check:dist-sync": "node ./scripts/check-dist-sync.mjs",
+    "release:patch": "node scripts/release.mjs patch",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major",
+    "release:push": "git push && git push --tags",
     "docker:up": "docker compose up -d",
-    "docker:up:build": "docker compose up -d --build",
+    "docker:up:build": "node scripts/docker-build.mjs && docker compose up -d",
     "docker:down": "docker compose down",
     "docker:restart": "docker compose down && docker compose up",
-    "docker:build": "docker compose build",
+    "docker:build": "node scripts/docker-build.mjs",
     "docker:logs": "docker compose logs -f",
     "pretest": "npm run check:dist-sync",
     "pretype-check": "npm run build --workspace @skribbl/shared",
