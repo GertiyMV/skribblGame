@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { resolve, dirname } from 'path';
@@ -28,6 +28,15 @@ pkg.version = newVersion;
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8');
 
 console.log(`Version bumped: ${oldVersion} → ${newVersion}`);
+
+const envPath = resolve(rootDir, '.env');
+const envContent = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : '';
+const updatedEnv = envContent.replace(/^APP_VERSION=.*/m, '').trimEnd();
+writeFileSync(
+  envPath,
+  (updatedEnv ? updatedEnv + '\n' : '') + `APP_VERSION=${newVersion}\n`,
+  'utf-8',
+);
 
 const tag = `v${newVersion}`;
 
