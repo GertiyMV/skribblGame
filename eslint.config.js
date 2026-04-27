@@ -28,7 +28,7 @@ export default [
     },
   },
   {
-    files: ['apps/server/**/*.ts'],
+    files: ['apps/server/**/*.ts', 'scripts/**/*.mjs'],
     languageOptions: {
       globals: {
         console: 'readonly',

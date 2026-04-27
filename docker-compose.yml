@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: apps/server/Dockerfile
       target: dev
+      args:
+        VERSION: ${APP_VERSION:-dev}
     image: skribbl-server-dev
     container_name: skribbl-server-dev
     ports:
@@ -29,6 +31,8 @@ services:
       context: .
       dockerfile: apps/client/Dockerfile
       target: dev
+      args:
+        VERSION: ${APP_VERSION:-dev}
     image: skribbl-client-dev
     container_name: skribbl-client-dev
     volumes:
